@@ -40,7 +40,7 @@ hub:
       auto_login: true
       admin_access: true
       logout_redirect_url: ""
-      oauth_callback_url: "https://jupyter.${INGRESS_HOSTNAME}/hub/oauth_callback"
+      oauth_callback_url: "CHANGE TO VAULT"
       scope: [ "default" ]
       client_id: "CHANGE TO VAULT"
       client_secret: "CHANGE TO VAULT"
@@ -131,8 +131,8 @@ hub:
       readOnly: false
   image:
     name: harbor.k8s.cmslabs.ru/svc_jupyter/k8s-hub/master
-    tag: "lastest"
-    pullPolicy:
+    tag: "latest"
+    pullPolicy: Always
     pullSecrets: [ ]
   resources: { }
   podSecurityContext:
