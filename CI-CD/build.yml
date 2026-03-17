@@ -12,7 +12,6 @@ hub:
     - version
   script:
     - VERSION="$(cat ./VERSION)"
-    - cd backend
     - echo "Building Docker image..."
     - buildah bud --no-cache -t $HUB_CI_IMAGE:$VERSION -f hub.dockerfile .
     - echo "Pushing Docker image to GitLab Registry..."
