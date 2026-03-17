@@ -28,7 +28,7 @@
 
 .releases-branch:
   # Ветки для основного pipeline
-  only:
-    - stage
-    - pre
-    - master
+  rules:
+    - if: '$CI_COMMIT_BRANCH !~ /^(stage|pre|master)$/'
+      when: always
+    - when: never

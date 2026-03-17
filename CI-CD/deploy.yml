@@ -1,5 +1,6 @@
 deploy:
   image: $KUBECTL_IMAGE
+  stage: deploy
   extends:
     - .releases-branch
   needs:
