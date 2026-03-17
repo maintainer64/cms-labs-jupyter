@@ -14,7 +14,7 @@ hub:
     - VERSION="$(cat ./VERSION)"
     - cd backend
     - echo "Building Docker image..."
-    - buildah bud --no-cache -t $HUB_CI_IMAGE:$VERSION  .
+    - buildah bud --no-cache -t $HUB_CI_IMAGE:$VERSION -f hub.dockerfile .
     - echo "Pushing Docker image to GitLab Registry..."
     - buildah push $HUB_CI_IMAGE:$VERSION
     - buildah push $HUB_CI_IMAGE:latest
