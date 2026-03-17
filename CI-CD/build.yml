@@ -17,4 +17,5 @@ hub:
     - buildah bud --no-cache -t $HUB_CI_IMAGE:$VERSION  .
     - echo "Pushing Docker image to GitLab Registry..."
     - buildah push $HUB_CI_IMAGE:$VERSION
+    - buildah push $HUB_CI_IMAGE:latest
     - echo "Deploying application..."
