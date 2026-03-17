@@ -1,0 +1,32 @@
+deploy:
+  image: $KUBECTL_IMAGE
+  extends:
+    - .releases-branch
+  needs:
+    - hub
+    - version
+  script:
+    - |
+      echo "$K8S_CONFIG" | base64 -d > kubeconfig.yaml
+      export KUBECONFIG=$PWD/kubeconfig.yaml
+      export VERSION="$(cat ./VERSION)"
+      echo "Подключаемся к серверу и деплоим приложение"
+      helm repo add jupyterhub https://hub.jupyter.org/helm-chart/
+      helm repo update
+      envsubst < "values.template.yaml" > "values.yaml"
+      envsubst < "ingress-http.template.yaml" > "ingress-http.yaml"
+      envsubst < "ingress-https.template.yaml" > "ingress-https.yaml"
+      helm upgrade \
+      --install \
+      --namespace jupyter \
+      --create-namespace \
+      jupyter \
+      jupyterhub/jupyterhub \
+      --version "4.3.x" \
+      --values values.yaml
+      kubectl replace --force -f ingress-http.yaml
+      kubectl replace --force -f ingress-https.yaml
+      kubectl label namespace jupyter pod-security.kubernetes.io/enforce=privileged
+
+  environment:
+    name: jupyter-${CI_COMMIT_REF_SLUG}
