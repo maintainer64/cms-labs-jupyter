@@ -10,7 +10,7 @@ workflow:
         DOCKER_PATH_BRANCH: pre
         K8S_CONFIG: ${K8S_CONFIG_PROD}
         INGRESS_HOSTNAME: k8s.cmslabs.ru
-        K8S_NAMESPACE: jupyter-pre
+        K8S_NAMESPACE: jupyter
     - if: $CI_COMMIT_REF_SLUG == "master"
       variables:
         DOCKER_PATH_BRANCH: master
