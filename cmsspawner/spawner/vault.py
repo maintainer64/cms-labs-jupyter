@@ -1,5 +1,6 @@
 import json
 import os
+from .rpc import CMSRpcClient
 
 
 def vault_init(c):
@@ -17,3 +18,6 @@ def vault_init(c):
     c.GenericOAuthenticator.authorize_url = secrets["OIDC_AUTHORIZE_URL"]
     c.GenericOAuthenticator.token_url = secrets["OIDC_TOKEN_URL"]
     c.GenericOAuthenticator.userdata_url = secrets["OIDC_USERDATA_URL"]
+    CMSRpcClient.base_url = secrets["CMS_URL"]
+    CMSRpcClient.login = secrets["CMS_LOGIN"]
+    CMSRpcClient.password = secrets["CMS_PASSWORD"]

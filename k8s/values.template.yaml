@@ -77,12 +77,19 @@ hub:
   cookieSecret: "CHANGE TO VAULT"
   initContainers:
     - name: vault-init
-      image: harbor.k8s.cmslabs.ru/svc_cms_labs/images/vault-inject
-      imageTag: latest
+      image: "harbor.k8s.cmslabs.ru/svc_cms_labs/images/vault-inject:${VERSION}"
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        allowPrivilegeEscalation: false
       args:
         - "--path=hub"
         - "--output=/var/run/secrets/app"
         - "--formats=json"
+      volumeMounts:
+        - name: vault-inject
+          mountPath: "/var/run/secrets/app"
+          readOnly: false
   nodeSelector: { }
   tolerations: [ ]
   concurrentSpawnLimit: 64
@@ -130,8 +137,8 @@ hub:
       mountPath: "/var/run/secrets/app"
       readOnly: false
   image:
-    name: harbor.k8s.cmslabs.ru/svc_jupyter/k8s-hub/master
-    tag: "latest"
+    name: harbor.k8s.cmslabs.ru/svc_jupyter/k8s-hub/${DOCKER_PATH_BRANCH}
+    tag: "${VERSION}"
     pullPolicy: Always
     pullSecrets: [ ]
   resources: { }

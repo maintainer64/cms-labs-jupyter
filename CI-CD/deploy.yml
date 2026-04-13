@@ -11,6 +11,7 @@ deploy:
       echo "$K8S_CONFIG" | base64 -d > kubeconfig.yaml
       export KUBECONFIG=$PWD/kubeconfig.yaml
       export VERSION="$(cat ./VERSION)"
+      cd k8s
       echo "Подключаемся к серверу и деплоим приложение"
       helm repo add jupyterhub https://hub.jupyter.org/helm-chart/
       helm repo update
@@ -19,7 +20,7 @@ deploy:
       envsubst < "ingress-https.template.yaml" > "ingress-https.yaml"
       helm upgrade \
       --install \
-      --namespace jupyter \
+      --namespace $K8S_NAMESPACE \
       --create-namespace \
       jupyter \
       jupyterhub/jupyterhub \

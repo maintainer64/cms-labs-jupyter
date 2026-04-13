@@ -1,7 +1,7 @@
 import logging
 
+from .rpc import CMSRpcClient
 from kubespawner import KubeSpawner
-
 from .utils import setup_logger
 
 
@@ -12,3 +12,47 @@ class CMSSpawner(KubeSpawner):
 
         self.logger = setup_logger(__name__, logging.ERROR)
         self.logger.info('Start working with CMSSpawner')
+        self.rpc: CMSRpcClient | None = None
+
+    async def _start(self):
+        self.rpc = CMSRpcClient()
+        return await super()._start()
+
+    async def profile_list(self):
+        if not self.user:
+            return None
+        auth_state = await self.user.get_auth_state()
+        if not auth_state:
+            return None
+        try:
+            print("auth_state", auth_state)
+        except Exception:
+            pass
+        try:
+            print("self.user", self.user.id)
+        except Exception:
+            pass
+        try:
+            print("self.user.email", self.user.email)
+        except Exception:
+            pass
+        attempts = await self.rpc.list_attempts(
+            user_ids=[],
+            statuses=["pending"],
+            limit=5000,
+            offset=0,
+        )
+        profiles = []
+        for attempt in attempts:
+            attempt_id = attempt['attempt_id']
+            attempt_number = attempt['id']
+            display_name = attempt.get('lti_routing_name') or attempt.get("user_name") or f"Attempt {attempt_id}"
+            description = f"Элемент курса совершён с номером попытки attempt_id({attempt_number})"
+            profile = {
+                'slug': attempt_id,
+                'display_name': display_name,
+                'default': False,
+                'description': description,
+            }
+            profiles.append(profile)
+        return profiles

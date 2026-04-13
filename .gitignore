@@ -1,5 +1,6 @@
 /.idea
 
+/build
 /.venv
 /env
 *.pyc
@@ -8,6 +9,10 @@ __pycache__
 
 node_modules
 web/lib/import-map.json
+
+k8s/ingress-http.yaml
+k8s/ingress-https.yaml
+k8s/values.yaml
 
 *.session
 /*.json
