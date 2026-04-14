@@ -17,7 +17,6 @@ deploy:
     - helm repo add jupyterhub https://hub.jupyter.org/helm-chart/
     - helm repo update
     - echo "Подключаемся к серверу и деплоим приложение"
-    - kubectl auth whoami
     - >
       helm upgrade jupyter jupyterhub/jupyterhub
       --install --history-max 5
