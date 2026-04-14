@@ -16,8 +16,11 @@ deploy:
       helm repo add jupyterhub https://hub.jupyter.org/helm-chart/
       helm repo update
       envsubst < "values.template.yaml" > "values.yaml"
+      cat values.yaml
       envsubst < "ingress-http.template.yaml" > "ingress-http.yaml"
+      cat ingress-http.yaml
       envsubst < "ingress-https.template.yaml" > "ingress-https.yaml"
+      cat ingress-https.yaml
       helm upgrade \
       --install \
       --namespace $K8S_NAMESPACE \

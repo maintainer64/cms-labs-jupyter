@@ -137,7 +137,7 @@ hub:
       mountPath: "/var/run/secrets/app"
       readOnly: false
   image:
-    name: harbor.k8s.cmslabs.ru/svc_jupyter/k8s-hub/${DOCKER_PATH_BRANCH}
+    name: "harbor.k8s.cmslabs.ru/svc_jupyter/k8s-hub/${DOCKER_PATH_BRANCH}"
     tag: "${VERSION}"
     pullPolicy: Always
     pullSecrets: [ ]
