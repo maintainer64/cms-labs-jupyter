@@ -20,10 +20,12 @@ class CMSSpawner(KubeSpawner):
 
     async def profile_list(self, *args, **kwargs) -> list | None:
         if not self.user:
-            return None
+            self.log.info("Profile list doesn't exist. User doesn't exist")
+            return []
         auth_state = await self.user.get_auth_state()
         if not auth_state:
-            return None
+            self.log.info("Profile list doesn't exist. Auth state doesn't exist")
+            return []
         try:
             print("auth_state", auth_state)
         except Exception:
@@ -42,6 +44,7 @@ class CMSSpawner(KubeSpawner):
             limit=5000,
             offset=0,
         )
+        self.log.info(f"Profile list count {len(attempts)} by user {self.user.username}")
         profiles = []
         for attempt in attempts:
             attempt_id = attempt['attempt_id']
