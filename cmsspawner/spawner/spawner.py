@@ -18,7 +18,7 @@ class CMSSpawner(KubeSpawner):
         self.rpc = CMSRpcClient()
         return await super()._start()
 
-    async def profile_list(self):
+    async def profile_list(self, *args, **kwargs) -> list | None:
         if not self.user:
             return None
         auth_state = await self.user.get_auth_state()
