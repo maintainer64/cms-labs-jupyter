@@ -77,7 +77,7 @@ hub:
   cookieSecret: "CHANGE TO VAULT"
   initContainers:
     - name: vault-init
-      image: "harbor.k8s.cmslabs.ru/svc_cms_labs/images/vault-inject:${VERSION}"
+      image: "harbor.k8s.cmslabs.ru/svc_cms_labs/images/vault-inject:latest"
       securityContext:
         runAsUser: 1000
         runAsGroup: 1000

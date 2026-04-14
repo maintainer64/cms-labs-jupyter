@@ -8,25 +8,23 @@ deploy:
     - version
   script:
     - |
+      cd k8s
       echo "$K8S_CONFIG" | base64 -d > kubeconfig.yaml
       export KUBECONFIG=$PWD/kubeconfig.yaml
       export VERSION="$(cat ./VERSION)"
-      cd k8s
       echo "Подключаемся к серверу и деплоим приложение"
       helm repo add jupyterhub https://hub.jupyter.org/helm-chart/
       helm repo update
       envsubst < "values.template.yaml" > "values.yaml"
-      cat values.yaml
       envsubst < "ingress-http.template.yaml" > "ingress-http.yaml"
-      cat ingress-http.yaml
       envsubst < "ingress-https.template.yaml" > "ingress-https.yaml"
-      cat ingress-https.yaml
       helm upgrade \
-      --install \
-      --namespace $K8S_NAMESPACE \
-      --create-namespace \
       jupyter \
       jupyterhub/jupyterhub \
+      --install --history-max 5 \
+      --atomic --hide-notes \
+      --create-namespace \
+      --namespace $K8S_NAMESPACE \
       --version "4.3.x" \
       --values values.yaml
       kubectl replace --force -f ingress-http.yaml
