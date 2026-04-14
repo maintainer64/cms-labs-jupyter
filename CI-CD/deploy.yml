@@ -7,29 +7,23 @@ deploy:
     - hub
     - version
   script:
-    - |
-      cd k8s
-      echo "$K8S_CONFIG" | base64 -d > kubeconfig.yaml
-      export KUBECONFIG=$PWD/kubeconfig.yaml
-      export VERSION="$(cat ./VERSION)"
-      echo "Подключаемся к серверу и деплоим приложение"
-      helm repo add jupyterhub https://hub.jupyter.org/helm-chart/
-      helm repo update
-      envsubst < "values.template.yaml" > "values.yaml"
-      envsubst < "ingress-http.template.yaml" > "ingress-http.yaml"
-      envsubst < "ingress-https.template.yaml" > "ingress-https.yaml"
-      helm upgrade \
-      jupyter \
-      jupyterhub/jupyterhub \
-      --install --history-max 5 \
-      --atomic --hide-notes \
-      --create-namespace \
-      --namespace $K8S_NAMESPACE \
-      --version "4.3.x" \
+    - export VERSION="$(cat ./VERSION)"
+    - cd k8s
+    - envsubst < "values.template.yaml" > "values.yaml"
+    - envsubst < "ingress-http.template.yaml" > "ingress-http.yaml"
+    - envsubst < "ingress-https.template.yaml" > "ingress-https.yaml"
+    - echo "$K8S_CONFIG" | base64 -d > kubeconfig.yaml
+    - export KUBECONFIG=$PWD/kubeconfig.yaml
+    - echo "Подключаемся к серверу и деплоим приложение"
+    - >
+      helm upgrade $DEPLOY_NAME ./k8s/base-chart
+      --install --history-max 5
+      --atomic --hide-notes
+      --create-namespace
+      --namespace $K8S_NAMESPACE
+      --version "4.3.x"
       --values values.yaml
-      kubectl replace --force -f ingress-http.yaml
-      kubectl replace --force -f ingress-https.yaml
-      kubectl label namespace jupyter pod-security.kubernetes.io/enforce=privileged
+
 
   environment:
     name: jupyter-${CI_COMMIT_REF_SLUG}
