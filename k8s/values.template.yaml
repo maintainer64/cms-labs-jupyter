@@ -122,8 +122,6 @@ hub:
   args: [ ]
   extraConfig:
     spawner_define.py: |
-      from cmsspawner.spawner.spawner import CMSSpawner
-      c.JupyterHub.spawner_class = CMSSpawner
       from cmsspawner.spawner.vault import vault_init
       vault_init(c)
   extraFiles: { }

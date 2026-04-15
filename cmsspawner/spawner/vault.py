@@ -2,6 +2,7 @@ import json
 import os
 
 from .route import RedirectToOIDCPreStepHandler
+from .spawner import CMSSpawner
 from .rpc import CMSRpcClient
 
 
@@ -24,10 +25,13 @@ def vault_init(c):
     CMSRpcClient.login = secrets["CMS_LOGIN"]
     CMSRpcClient.password = secrets["CMS_PASSWORD"]
 
+    # Изменяем конфигурацию
     c.JupyterHub.extra_handlers = [
         (r'/pnet-lab-addon/api/v1/sso/login', RedirectToOIDCPreStepHandler),
     ]
     # Запрещает пользователям создавать дополнительные именованные серверы
     c.JupyterHub.allow_named_servers = False
     # Дополнительная подстраховка: лимит активных серверов на одного пользователя
-    c.Spawner.active_server_limit = 1
+    c.JupyterHub.active_server_limit = 1
+    # Подменяем класс spawner_class
+    c.JupyterHub.spawner_class = CMSSpawner
