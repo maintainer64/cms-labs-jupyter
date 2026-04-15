@@ -12,7 +12,6 @@ class CMSSpawner(KubeSpawner):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
         self.logger = setup_logger(__name__, logging.INFO)
         self.logger.info('Start working with CMSSpawner')
         self._rpc: CMSRpcClient | None = None
@@ -23,6 +22,15 @@ class CMSSpawner(KubeSpawner):
         return self._rpc
 
     async def _start(self):
+        if self.extra_labels is None:
+            self.extra_labels = {}
+        if self.user_options and 'profile' in self.user_options:
+            attempt_id = str(self.user_options['profile'])
+            self.extra_labels.update({
+                "hub.jupyter.org/cms_attempt_id": attempt_id,
+            })
+            self.env['ATTEMPT_ID'] = attempt_id
+            self.log.info(f"Updated extra_labels with attempt_id: {attempt_id}")
         return await super()._start()
 
     async def get_options_form(self):
