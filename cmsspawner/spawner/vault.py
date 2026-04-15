@@ -27,3 +27,7 @@ def vault_init(c):
     c.JupyterHub.extra_handlers = [
         (r'/pnet-lab-addon/api/v1/sso/login', RedirectToOIDCPreStepHandler),
     ]
+    # Запрещает пользователям создавать дополнительные именованные серверы
+    c.JupyterHub.allow_named_servers = False
+    # Дополнительная подстраховка: лимит активных серверов на одного пользователя
+    c.Spawner.active_server_limit = 1
