@@ -57,6 +57,7 @@ hub:
         - "instructor"
     KubeSpawner:
       enable_user_namespaces: false
+      delete_pvc: true
       storage_pvc_ensure: true
       k8s_api_verify_ssl: false
       k8s_api_request_timeout: 120
