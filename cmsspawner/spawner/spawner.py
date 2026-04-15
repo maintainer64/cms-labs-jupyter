@@ -18,7 +18,7 @@ class CMSSpawner(KubeSpawner):
         self.rpc = CMSRpcClient()
         return await super()._start()
 
-    async def profile_list(self, *args, **kwargs) -> list | None:
+    async def profile_list(self, current_spawner: KubeSpawner) -> list | None:
         if not self.user:
             self.log.info("Profile list doesn't exist. User doesn't exist")
             return []

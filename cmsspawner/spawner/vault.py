@@ -1,5 +1,7 @@
 import json
 import os
+
+from .route import RedirectToOIDCPreStepHandler
 from .rpc import CMSRpcClient
 
 
@@ -21,3 +23,7 @@ def vault_init(c):
     CMSRpcClient.base_url = secrets["CMS_URL"]
     CMSRpcClient.login = secrets["CMS_LOGIN"]
     CMSRpcClient.password = secrets["CMS_PASSWORD"]
+
+    c.JupyterHub.extra_handlers = [
+        (r'/pnet-lab-addon/api/v1/sso/login', RedirectToOIDCPreStepHandler),
+    ]
