@@ -4,8 +4,6 @@ from typing import Any, Dict, List, Optional
 
 import aiohttp
 
-cms_rpc = None
-
 
 class CMSRpcClient:
     """
@@ -72,7 +70,7 @@ class CMSRpcClient:
             offset: Optional[int] = None,
             server_client_ids: Optional[List[str]] = None,
             statuses: Optional[List[str]] = None,
-            user_ids: Optional[List[int]] = None,
+            user_ids: Optional[List[str]] = None,
     ) -> List[Dict[str, Any]]:
         """
         Получить список попыток LTI по заданным фильтрам.

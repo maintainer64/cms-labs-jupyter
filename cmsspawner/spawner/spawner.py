@@ -2,6 +2,7 @@ import logging
 
 from tornado import web
 
+from .models import UserInfo
 from .rpc import CMSRpcClient
 from kubespawner import KubeSpawner
 from .utils import setup_logger
@@ -14,10 +15,14 @@ class CMSSpawner(KubeSpawner):
 
         self.logger = setup_logger(__name__, logging.INFO)
         self.logger.info('Start working with CMSSpawner')
-        self.rpc: CMSRpcClient | None = None
+        self._rpc: CMSRpcClient | None = None
+
+    async def get_rpc_client(self) -> CMSRpcClient:
+        if self._rpc is None:
+            self._rpc = CMSRpcClient()
+        return self._rpc
 
     async def _start(self):
-        self.rpc = CMSRpcClient()
         return await super()._start()
 
     async def get_options_form(self):
@@ -34,34 +39,34 @@ class CMSSpawner(KubeSpawner):
             )
         return await super().get_options_form()
 
-    async def profile_list(self, current_spawner: KubeSpawner) -> list | None:
-        self.log.info("Fetching profiles for user")
+    async def get_user_profile(self, current_spawner: KubeSpawner) -> UserInfo | None:
         if not current_spawner.user:
-            self.log.info("Profile list doesn't exist. User doesn't exist")
-            return []
+            self.log.info("Current user is empty")
+            return None
         auth_state = await current_spawner.user.get_auth_state()
         if not auth_state:
-            self.log.info("Profile list doesn't exist. Auth state doesn't exist")
-            return []
-        try:
-            print("auth_state", auth_state)
-        except Exception:
-            pass
-        try:
-            print("self.user", current_spawner.user.id)
-        except Exception:
-            pass
-        try:
-            print("self.user.email", current_spawner.user.email)
-        except Exception:
-            pass
-        attempts = await self.rpc.list_attempts(
-            user_ids=[],
+            self.log.info("Current user state is empty")
+            return None
+        return UserInfo(
+            user_id=auth_state["oauth_user"]["sub"],
+            username=auth_state["oauth_user"]["username"],
+            email=auth_state["oauth_user"]["email"],
+            name=auth_state["oauth_user"]["name"],
+        )
+
+    async def profile_list(self, current_spawner: KubeSpawner) -> list | None:
+        self.log.info("Fetching profiles for user")
+        user = await self.get_user_profile(current_spawner)
+        if not user:
+            return None
+        rpc = await self.get_rpc_client()
+        attempts = await rpc.list_attempts(
+            user_ids=[user.user_id],
             statuses=["pending"],
             limit=5000,
             offset=0,
         )
-        self.log.info(f"Profile list count {len(attempts)} by user {self.user.username}")
+        self.log.info(f"Profile list count {len(attempts)} by user {user.username}")
         profiles = []
         for attempt in attempts:
             attempt_id = attempt['attempt_id']

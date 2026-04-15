@@ -13,6 +13,7 @@ def vault_init(c):
     c.KubeSpawner.storage_extra_labels = {'hub.jupyter.org/username': '{escaped_username}'}
     c.KubeSpawner.extra_labels = {'hub.jupyter.org/username': '{escaped_username}'}
     c.JupyterHub.cookie_secret = secrets["COOKIE_SECRET"]
+    os.environ['JUPYTERHUB_CRYPT_KEY'] = secrets["JUPYTERHUB_CRYPT_KEY"]
     c.JupyterHub.db_url = secrets["MYSQL_URL"]
     os.environ["MYSQL_PWD"] = secrets["MYSQL_PASSWORD"]
     c.GenericOAuthenticator.client_id = secrets["OIDC_CLIENT_ID"]
