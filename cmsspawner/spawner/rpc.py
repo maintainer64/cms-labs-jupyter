@@ -89,7 +89,7 @@ class CMSRpcClient:
         if statuses is not None:
             params["statuses"] = statuses
         if user_ids is not None:
-            params["user_ids"] = user_ids
+            params["user_ids"] = list(map(int, user_ids))
 
         result = await self._request("lti_attempt.list_external", params)
         return result.get("model", [])
