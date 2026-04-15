@@ -444,8 +444,8 @@ singleuser:
       dnsPortsCloudMetadataServer: true
       dnsPortsKubeSystemNamespace: true
       dnsPortsPrivateIPs: true
-      nonPrivateIPs: true
-      privateIPs: false
+      nonPrivateIPs: false
+      privateIPs: true
     interNamespaceAccessLabels: ignore
     allowedIngressPorts: [ ]
   events: true
