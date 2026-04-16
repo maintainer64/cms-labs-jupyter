@@ -35,7 +35,5 @@ def vault_init(c):
     ]
     # Запрещает пользователям создавать дополнительные именованные серверы
     c.JupyterHub.allow_named_servers = False
-    # Дополнительная подстраховка: лимит активных серверов на одного пользователя
-    c.JupyterHub.active_server_limit = 1
     # Подменяем класс spawner_class
     c.JupyterHub.spawner_class = CMSSpawner
