@@ -26,6 +26,9 @@ def vault_init(c):
     CMSRpcClient.login = secrets["CMS_LOGIN"]
     CMSRpcClient.password = secrets["CMS_PASSWORD"]
 
+    RedirectToOIDCPreStepHandler.git_url = secrets["CMS_TASK_URL"]
+    RedirectToOIDCPreStepHandler.git_branch = secrets["CMS_TASK_BRANCH"]
+
     # Изменяем конфигурацию
     c.JupyterHub.extra_handlers = [
         (r'/pnet-lab-addon/api/v1/sso/login', RedirectToOIDCPreStepHandler),
