@@ -4,3 +4,4 @@ variables:
   BUILDER_GO_IMAGE: ${REGISTRY_URL}/svc_cms_labs/images/builder-go
   KUBECTL_IMAGE: ${REGISTRY_URL}/svc_cms_labs/images/kubectl
   HUB_CI_IMAGE: ${REGISTRY_URL}/${REGISTRY_PATH}/k8s-hub/${DOCKER_PATH_BRANCH}
+  NOTEBOOK_CI_IMAGE: ${REGISTRY_URL}/${REGISTRY_PATH}/notebook/${DOCKER_PATH_BRANCH}
