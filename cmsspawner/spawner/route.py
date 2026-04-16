@@ -40,7 +40,7 @@ class RedirectToOIDCPreStepHandler(BaseHandler):
             extra_params = json.loads(decoded_bytes)
             attempt_id = extra_params["attempt_id"] or ""
             pnet_labs_path = extra_params["pnet_labs_path"] or ""
-            SSOTokenPublicExtraParams(
+            return SSOTokenPublicExtraParams(
                 attempt_id=attempt_id,
                 pnet_labs_path=pnet_labs_path,
             )
