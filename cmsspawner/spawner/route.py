@@ -54,7 +54,7 @@ class RedirectToOIDCPreStepHandler(BaseHandler):
         params = {
             "repo": f"{self.git_url}/{base_path}",
             "urlpath": f"lab/tree/{path}",  # Jupyter notebook open
-            "branch": "pre"
+            "branch": self.git_branch
         }
         query_string = urlencode(params)
         return f"/hub/user-redirect/git-pull?{query_string}"
