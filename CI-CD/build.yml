@@ -27,8 +27,9 @@ notebook:
   image: ${DOCKER_IMAGE}
   variables:
     KUBERNETES_CPU_LIMIT: 4
-    KUBERNETES_MEMORY_LIMIT: 4Gi
-    KUBERNETES_EPHEMERAL_STORAGE_LIMIT: 10Gi
+    KUBERNETES_MEMORY_LIMIT: 8Gi
+    KUBERNETES_HELPER_MEMORY_LIMIT: 4Gi
+    KUBERNETES_EPHEMERAL_STORAGE_LIMIT: 20Gi
   needs:
     - version
   script:
@@ -36,6 +37,6 @@ notebook:
     - echo "Building Docker image..."
     - buildah bud --no-cache -t $NOTEBOOK_CI_IMAGE:$VERSION -t $NOTEBOOK_CI_IMAGE:latest -f notebook.dockerfile .
     - echo "Pushing Docker image to GitLab Registry..."
-    - buildah push $HUB_CI_IMAGE:$VERSION
-    - buildah push $HUB_CI_IMAGE:latest
+    - buildah push $NOTEBOOK_CI_IMAGE:$VERSION
+    - buildah push $NOTEBOOK_CI_IMAGE:latest
     - echo "Deploying application..."
