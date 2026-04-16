@@ -5,6 +5,7 @@ deploy:
     - .releases-branch
   needs:
     - hub
+    - notebook
     - version
   script:
     - export VERSION="$(cat ./VERSION)"
