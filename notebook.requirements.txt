@@ -16,5 +16,7 @@ ipywidgets  # Виджеты для блокнота
 # Разработка
 pipdeptree  # Покажет дерево зависимостей
 jupyter-collaboration  # Покажет человек которые сидят в блокноте
+jupyterlab-execute-time  # Сколько времени работала ячейка
+jupyter-resource-usage  # Текущее потребление блокнота
 
 
