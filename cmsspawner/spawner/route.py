@@ -24,7 +24,7 @@ class FirstStepHandler(BaseHandler):
         self.clear_login_cookie()
         self.statsd.incr('logout')
         query_string = self.request.query
-        self.redirect(f"{SecondStepHandler.route}/{query_string}")
+        self.redirect(f"{SecondStepHandler.route}?{query_string}")
 
 
 class SecondStepHandler(BaseHandler):
