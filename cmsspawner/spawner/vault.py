@@ -6,6 +6,15 @@ from .spawner import CMSSpawner
 from .rpc import CMSRpcClient
 
 
+def extract_display_name(authenticator, handler, authentication):
+    auth_state = authentication.get('auth_state', {})
+    oauth_user = auth_state.get('oauth_user', {})
+    real_name = oauth_user.get('name') or oauth_user.get('display_name')
+    if real_name:
+        authentication['auth_state']['display_name'] = real_name
+        authentication['display_name'] = real_name
+    return authentication
+
 def vault_init(c):
     with open('/var/run/secrets/app/json', 'r') as f:
         secrets = json.load(f)
@@ -22,6 +31,7 @@ def vault_init(c):
     c.GenericOAuthenticator.authorize_url = secrets["OIDC_AUTHORIZE_URL"]
     c.GenericOAuthenticator.token_url = secrets["OIDC_TOKEN_URL"]
     c.GenericOAuthenticator.userdata_url = secrets["OIDC_USERDATA_URL"]
+    c.GenericOAuthenticator.post_auth_hook = extract_display_name
     CMSRpcClient.base_url = secrets["CMS_URL"]
     CMSRpcClient.login = secrets["CMS_LOGIN"]
     CMSRpcClient.password = secrets["CMS_PASSWORD"]
