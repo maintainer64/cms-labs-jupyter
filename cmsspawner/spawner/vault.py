@@ -1,7 +1,7 @@
 import json
 import os
 
-from .route import RedirectToOIDCPreStepHandler
+from .route import FirstStepHandler, SecondStepHandler
 from .spawner import CMSSpawner
 from .rpc import CMSRpcClient
 
@@ -14,6 +14,7 @@ def extract_display_name(authenticator, handler, authentication):
         authentication['auth_state']['display_name'] = real_name
         authentication['display_name'] = real_name
     return authentication
+
 
 def vault_init(c):
     with open('/var/run/secrets/app/json', 'r') as f:
@@ -36,12 +37,13 @@ def vault_init(c):
     CMSRpcClient.login = secrets["CMS_LOGIN"]
     CMSRpcClient.password = secrets["CMS_PASSWORD"]
 
-    RedirectToOIDCPreStepHandler.git_url = secrets["CMS_TASK_URL"]
-    RedirectToOIDCPreStepHandler.git_branch = secrets["CMS_TASK_BRANCH"]
+    SecondStepHandler.git_url = secrets["CMS_TASK_URL"]
+    SecondStepHandler.git_branch = secrets["CMS_TASK_BRANCH"]
 
     # Изменяем конфигурацию
     c.JupyterHub.extra_handlers = [
-        (r'/pnet-lab-addon/api/v1/sso/login', RedirectToOIDCPreStepHandler),
+        (FirstStepHandler.route, FirstStepHandler),
+        (SecondStepHandler.route, SecondStepHandler),
     ]
     # Разрешает использовать 5 серверов
     c.JupyterHub.allow_named_servers = True

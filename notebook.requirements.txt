@@ -19,5 +19,3 @@ jupyter-collaboration  # Покажет человек которые сидят
 jupyterlab-execute-time  # Сколько времени работала ячейка
 jupyter-resource-usage  # Текущее потребление блокнота
 nbgitpuller  # Скачивает git репозитории
-
-

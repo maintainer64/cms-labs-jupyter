@@ -4,7 +4,10 @@ from dataclasses import dataclass
 from urllib.parse import urlencode
 
 from jupyterhub.handlers import BaseHandler
+from tornado import web
 from tornado.web import HTTPError
+
+from cmsspawner.spawner.models import UserInfo
 
 
 @dataclass
@@ -13,23 +16,60 @@ class SSOTokenPublicExtraParams:
     pnet_labs_path: str = ""
 
 
-class RedirectToOIDCPreStepHandler(BaseHandler):
-    git_url: str = ""
-    git_branch: str = "master"
+class FirstStepHandler(BaseHandler):
+    route = r"/pnet-lab-addon/api/v1/sso/login"
 
     async def get(self, *args, **kwargs):
         self.log.info("User login with addon")
         self.clear_login_cookie()
         self.statsd.incr('logout')
-        extra = self.get_params_extra()
-        if not extra:
-            self.log.error("Failed to get extra params")
+        query_string = self.request.query
+        self.redirect(f"{SecondStepHandler.route}/{query_string}")
+
+
+class SecondStepHandler(BaseHandler):
+    git_url: str = ""
+    git_branch: str = "master"
+    route = r"/pnet-lab-addon/api/v1/sso/connect"
+
+    @web.authenticated
+    async def get(self, *args, **kwargs):
+        profile = await self.get_user_profile()
+        if not profile:
             raise HTTPError(
                 400,
-                "Параметры лабораторной работы неверные. Пожалуйста, вернитесь в Moodle и попробуйте запустить лабораторную работу снова."
+                "Отсутствует профиль пользователя.\nПожалуйста, вернитесь в Moodle и попробуйте запустить лабораторную работу снова."
+            )
+        user = await self.get_current_user()
+        self.log.info(f"User {profile.email} login with addon")
+        extra = self.get_params_extra()
+        if not extra:
+            self.log.error(f"Failed to get extra params by user {profile.email}")
+            raise HTTPError(
+                400,
+                "Параметры лабораторной работы неверные.\nПожалуйста, вернитесь в Moodle и попробуйте запустить лабораторную работу снова."
             )
         redirect_url = self.get_query_git_params(extra=extra)
-        self.redirect(redirect_url)
+        raise HTTPError(
+            410,
+            "Пока успех"
+        )
+
+    async def get_user_profile(self) -> UserInfo | None:
+        user = await self.get_current_user()
+        if user:
+            self.log.info("Current user is empty")
+            return None
+        auth_state = await user.get_auth_state()
+        if not auth_state:
+            self.log.info("Current user state is empty")
+            return None
+        return UserInfo(
+            user_id=auth_state["oauth_user"]["sub"],
+            username=auth_state["oauth_user"]["username"],
+            email=auth_state["oauth_user"]["email"],
+            name=auth_state["oauth_user"]["name"],
+        )
 
     def get_params_extra(self) -> SSOTokenPublicExtraParams | None:
         extra_b64 = self.get_argument("extra", "")
