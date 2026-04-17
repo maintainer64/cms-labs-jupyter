@@ -53,7 +53,7 @@ class SecondStepHandler(BaseHandler):
         rpc_client = CMSRpcClient()
         attempts = await rpc_client.list_attempts(
             attempt_ids=[extra.attempt_id],
-            user_ids=[user.user_id],
+            user_ids=[profile.user_id],
             limit=5000,
             offset=0,
         )
@@ -75,7 +75,7 @@ class SecondStepHandler(BaseHandler):
             try:
                 await user.spawn(
                     server_name=attempt_id,
-                    user_options={"profile": attempt_id, "name": attempt_name}
+                    options={"profile": attempt_id, "name": attempt_name}
                 )
             except Exception as e:
                 self.log.error(f"Failed to spawn server '{attempt_id}' for {profile.email}: {e}")
