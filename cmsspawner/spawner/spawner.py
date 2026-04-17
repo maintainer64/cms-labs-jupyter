@@ -22,6 +22,12 @@ class CMSSpawner(KubeSpawner):
         return self._rpc
 
     async def _start(self):
+        if not self.name:
+            self.log.warning(f"User {self.user.name} tried to launch a nameless default server.")
+            raise web.HTTPError(
+                400,
+                "Запуск стандартного сервера запрещен. Пожалуйста, используйте ссылки из Moodle для запуска лабораторных работ."
+            )
         if self.extra_labels is None:
             self.extra_labels = {}
         if self.user_options and 'profile' in self.user_options:
@@ -63,14 +69,21 @@ class CMSSpawner(KubeSpawner):
         )
 
     async def profile_list(self, current_spawner: KubeSpawner) -> list | None:
+        if not current_spawner.name:
+            self.log.warning(f"Attempted to fetch profiles without a specified servername.")
+            raise web.HTTPError(
+                400,
+                "Запуск стандартного сервера запрещен. "
+                "Пожалуйста, используйте ссылки из Moodle для запуска лабораторных работ."
+            )
         self.log.info("Fetching profiles for user")
         user = await self.get_user_profile(current_spawner)
         if not user:
             return None
         rpc = await self.get_rpc_client()
         attempts = await rpc.list_attempts(
+            attempt_ids=[str(current_spawner.name)],
             user_ids=[user.user_id],
-            statuses=["pending"],
             limit=5000,
             offset=0,
         )

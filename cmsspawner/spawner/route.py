@@ -28,7 +28,7 @@ class RedirectToOIDCPreStepHandler(BaseHandler):
                 400,
                 "Параметры лабораторной работы неверные. Пожалуйста, вернитесь в Moodle и попробуйте запустить лабораторную работу снова."
             )
-        redirect_url = self.get_query_git_params(path=extra.pnet_labs_path)
+        redirect_url = self.get_query_git_params(extra=extra)
         self.redirect(redirect_url)
 
     def get_params_extra(self) -> SSOTokenPublicExtraParams | None:
@@ -48,8 +48,8 @@ class RedirectToOIDCPreStepHandler(BaseHandler):
             self.log.error(f"Failed to decode extra param: {e}")
             return None
 
-    def get_query_git_params(self, path: str) -> str | None:
-        path = path.strip("/")
+    def get_query_git_params(self, extra: SSOTokenPublicExtraParams) -> str | None:
+        path = extra.pnet_labs_path.strip("/")
         base_path = path.split("/")[0]
         params = {
             "repo": f"{self.git_url}/{base_path}",
@@ -57,4 +57,4 @@ class RedirectToOIDCPreStepHandler(BaseHandler):
             "branch": self.git_branch
         }
         query_string = urlencode(params)
-        return f"/hub/user-redirect/git-pull?{query_string}"
+        return f"/hub/user-redirect/{extra.attempt_id}/git-pull?{query_string}"
