@@ -18,6 +18,12 @@ class SSOTokenPublicExtraParams:
 
 
 class FirstStepHandler(BaseHandler):
+    """
+    Хендлер разлогинивает пользователя (чтобы стереть данные предыдущего пользователя на этом компьютере)
+    И отправляет через на обработчик ниже. @web.authenticated гарантирует появление пользователя в системе
+    Цепочка редиректов получит свежий профиль пользователя.
+    Не забывает параметры extra прокинуть с текущей страницы
+    """
     route = r"/pnet-lab-addon/api/v1/sso/login"
 
     async def get(self, *args, **kwargs):
@@ -29,6 +35,11 @@ class FirstStepHandler(BaseHandler):
 
 
 class SecondStepHandler(BaseHandler):
+    """
+    Хендлер проверяет текущие параметры лабораторной из extra и CMS системы и создаёт под ноутбука
+    Затем редиректит на страницу с созданным сервером и gitPull параметрами для клонирования задания в
+    созданное пространство
+    """
     git_url: str = ""
     git_branch: str = "master"
     route = r"/pnet-lab-addon/api/v1/sso/connect"
@@ -54,6 +65,7 @@ class SecondStepHandler(BaseHandler):
         attempts = await rpc_client.list_attempts(
             attempt_ids=[extra.attempt_id],
             user_ids=[profile.user_id],
+            statuses=["pending", "active"],
             limit=5000,
             offset=0,
         )
@@ -87,6 +99,10 @@ class SecondStepHandler(BaseHandler):
         self.redirect(redirect_url)
 
     async def get_user_profile(self) -> UserInfo | None:
+        """
+        Получает профиль текущего пользователя из данных токена CMS
+        :return: Профиль пользователя или NULL
+        """
         user = await self.get_current_user()
         if not user:
             self.log.info("Current user is empty")
@@ -103,6 +119,10 @@ class SecondStepHandler(BaseHandler):
         )
 
     def get_params_extra(self) -> SSOTokenPublicExtraParams | None:
+        """
+        Код декодирует строку extra base64 в приятный DTO
+        :return: DTO с параметрами о попытке и данными лабы от CMS системы при переходе
+        """
         extra_b64 = self.get_argument("extra", "")
         if not extra_b64:
             return None
@@ -120,6 +140,13 @@ class SecondStepHandler(BaseHandler):
             return None
 
     def get_redirect_complete_params(self, extra: SSOTokenPublicExtraParams, profile: UserInfo) -> str:
+        """
+        Создаёт ссылку для перехода на созданный ресурс
+        :param extra: В extra: attempt_id - название созданного сервера + уникальная попытка сдачи лабы
+        pnet_labs_path - <Репозиторий в группе задач> + <Путь до файла ipub для открытия>
+        :param profile: Профиль текущего пользователя
+        :return: Строка перехода для синхронизации репозитория в простраство созданного ноутбука пользователя
+        """
         path = extra.pnet_labs_path.strip("/")
         base_path = path.split("/")[0]
         params = {

@@ -3,6 +3,9 @@ import logging
 from tornado import web
 
 from kubespawner import KubeSpawner
+
+from .models import UserInfo
+from .rpc import CMSRpcClient
 from .utils import setup_logger
 
 
@@ -14,6 +17,10 @@ class CMSSpawner(KubeSpawner):
         self.logger.info('Start working with CMSSpawner')
 
     async def _start(self):
+        """
+        Внутренний метод спавнера, который аллоцирует появление ресурсов
+        :return: После выхода из этого метода появляются артефакты в виде диска, сервера и пода (иногда неймспейса)
+        """
         if not self.name:
             self.log.warning(f"User {self.user.name} tried to launch a nameless default server.")
             raise web.HTTPError(
@@ -30,3 +37,71 @@ class CMSSpawner(KubeSpawner):
             self.env['ATTEMPT_ID'] = attempt_id
             self.log.info(f"Updated extra_labels with attempt_id: {attempt_id}")
         return await super()._start()
+
+    async def get_options_form(self):
+        """
+        Метод отдаёт список запущенных попыток у пользователя
+        (перегружен, чтобы не использовать дефолтные параметры)
+        :return: Список профилей пользователя в формате HTML
+        """
+        profiles = await self.profile_list(self)
+        if not profiles:
+            self.log.warning(f"User tried to login but has no active attempts.")
+            raise web.HTTPError(
+                403,
+                "У вас нет активных сессий в Moodle для запуска сервера."
+            )
+        return await super().get_options_form()
+
+    async def get_user_profile(self, current_spawner: KubeSpawner) -> UserInfo | None:
+        """
+        Метод получает из текущий профиль пользователя
+        :param current_spawner: Текущий спавнер под блокнота
+        :return: Профиль пользователя или None
+        """
+        if not current_spawner.user:
+            self.log.info("Current user is empty")
+            return None
+        auth_state = await current_spawner.user.get_auth_state()
+        if not auth_state:
+            self.log.info("Current user state is empty")
+            return None
+        return UserInfo(
+            user_id=auth_state["oauth_user"]["sub"],
+            username=auth_state["oauth_user"]["username"],
+            email=auth_state["oauth_user"]["email"],
+            name=auth_state["oauth_user"]["name"],
+        )
+
+    async def profile_list(self, current_spawner: KubeSpawner) -> list | None:
+        """
+        Функция которая внутри KubeSpawner вызывается автоматически (не перегружена) для списка профилей
+        :param current_spawner: Текущий spawner
+        :return: Возвращает попытки лабораторной у пользователя не завершенные
+        """
+        self.log.info("Fetching profiles for user")
+        profile = await self.get_user_profile(current_spawner)
+        if not profile:
+            return None
+        rpc_client = CMSRpcClient()
+        attempts = await rpc_client.list_attempts(
+            user_ids=[profile.user_id],
+            statuses=["pending", "active"],
+            limit=5000,
+            offset=0,
+        )
+        self.log.info(f"Profile list count {len(attempts)} by user {profile.username}")
+        profiles = []
+        for attempt in attempts:
+            attempt_id = attempt['attempt_id']
+            attempt_number = attempt['id']
+            display_name = attempt.get('lti_routing_name') or attempt.get("user_name") or f"Attempt {attempt_id}"
+            description = f"Элемент курса совершён с номером попытки attempt_id({attempt_number})"
+            profile = {
+                'slug': attempt_id,
+                'display_name': display_name,
+                'default': False,
+                'description': description,
+            }
+            profiles.append(profile)
+        return profiles
