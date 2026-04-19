@@ -19,8 +19,7 @@ async def middleware_restricted(self):
     path = self.request.path
     if any(p.match(path) for p in FORBIDDEN_PATTERNS):
         # Если пользователь не админ — блокируем доступ
-        if not (self.current_user and self.current_user.admin):
-            raise web.HTTPError(403, "UI Access Restricted")
+        raise web.HTTPError(403, "Доступ к странице ограничен")
 
     return await original_prepare(self)
 
