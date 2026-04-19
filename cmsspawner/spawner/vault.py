@@ -50,3 +50,5 @@ def vault_init(c):
     c.JupyterHub.named_server_limit_per_user = 5
     # Подменяем класс spawner_class
     c.JupyterHub.spawner_class = CMSSpawner
+    # Подключаем Middleware для hub
+    from .restricted import FORBIDDEN_PATTERNS  # noqa
