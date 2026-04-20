@@ -76,8 +76,7 @@ class SecondStepHandler(BaseHandler):
             )
         attempt = attempts[0]
         attempt_id = attempt['attempt_id']
-        attempt_number = attempt['id']
-        attempt_name = attempt.get('lti_routing_name') or attempt.get("user_name") or f"Attempt {attempt_id}"
+        attempt_number = str(attempt['id'])
         if attempt_id != extra.attempt_id:
             raise HTTPError(
                 400,
