@@ -407,7 +407,7 @@ proxy:
 # singleuser relates to the configuration of KubeSpawner which runs in the hub
 # pod, and its spawning of user pods such as jupyter-myusername.
 singleuser:
-  podNameTemplate: "jup-{username}"
+  podNameTemplate: "jup-{username}-{servername}"
   extraTolerations: [ ]
   nodeSelector: { }
   extraNodeAffinity:
@@ -474,8 +474,8 @@ singleuser:
     homeMountPath: /home/jovyan
     dynamic:
       # storageClass: он используется по умолчанию в кубе
-      pvcNameTemplate: claim-{escaped_username}{servername}
-      volumeNameTemplate: volume-{escaped_username}{servername}
+      pvcNameTemplate: claim-{escaped_username}-{servername}
+      volumeNameTemplate: volume-{escaped_username}-{servername}
       storageAccessModes: [ ReadWriteOnce ]
       subPath:
   image:
