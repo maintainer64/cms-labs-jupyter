@@ -95,7 +95,11 @@ class SecondStepHandler(BaseHandler):
                     500,
                     f"{e}\nПожалуйста, вернитесь в Moodle и попробуйте запустить лабораторную работу снова."
                 )
-        redirect_url = self.get_redirect_complete_params(extra=extra, profile=profile)
+        redirect_url = self.get_redirect_complete_params(
+            server_name=attempt_number,
+            username=profile.username,
+            lab_url=extra.pnet_labs_path,
+        )
         self.redirect(redirect_url)
 
     async def get_user_profile(self) -> UserInfo | None:
@@ -139,15 +143,15 @@ class SecondStepHandler(BaseHandler):
             self.log.error(f"Failed to decode extra param: {e}")
             return None
 
-    def get_redirect_complete_params(self, extra: SSOTokenPublicExtraParams, profile: UserInfo) -> str:
+    def get_redirect_complete_params(self, server_name: str, username: str, lab_url: str) -> str:
         """
         Создаёт ссылку для перехода на созданный ресурс
-        :param extra: В extra: attempt_id - название созданного сервера + уникальная попытка сдачи лабы
-        pnet_labs_path - <Репозиторий в группе задач> + <Путь до файла ipub для открытия>
-        :param profile: Профиль текущего пользователя
+        :param server_name - название созданного сервера + уникальная попытка сдачи лабы
+        :param lab_url - <Репозиторий в группе задач> + <Путь до файла ipub для открытия>
+        :param username: Профиль текущего пользователя
         :return: Строка перехода для синхронизации репозитория в простраство созданного ноутбука пользователя
         """
-        path = extra.pnet_labs_path.strip("/")
+        path = lab_url.strip("/")
         base_path = path.split("/")[0]
         params = {
             "repo": f"{self.git_url}/{base_path}",
@@ -155,4 +159,4 @@ class SecondStepHandler(BaseHandler):
             "branch": self.git_branch
         }
         query_string = urlencode(params)
-        return f"/user/{profile.username}/{extra.attempt_id}/git-pull?{query_string}"
+        return f"/user/{username}/{server_name}/git-pull?{query_string}"
