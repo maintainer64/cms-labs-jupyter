@@ -88,7 +88,7 @@ class SecondStepHandler(BaseHandler):
             try:
                 await user.spawn(
                     server_name=attempt_number,
-                    options={"profile": attempt_id, "name": attempt_name}
+                    options={"profile": attempt_id}
                 )
             except Exception as e:
                 self.log.error(f"Failed to spawn server '{attempt_id}' for {profile.email}: {e}")
