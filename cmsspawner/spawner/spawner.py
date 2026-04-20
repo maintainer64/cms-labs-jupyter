@@ -10,6 +10,13 @@ from .utils import setup_logger
 
 
 class CMSSpawner(KubeSpawner):
+    """
+    Класс хранит базовую логику для списка профилей и создание информации в кубернетес
+    """
+
+    extra_pod_config = {
+        "restartPolicy": "Always",
+    }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
