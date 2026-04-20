@@ -76,17 +76,18 @@ class SecondStepHandler(BaseHandler):
             )
         attempt = attempts[0]
         attempt_id = attempt['attempt_id']
+        attempt_number = attempt['id']
         attempt_name = attempt.get('lti_routing_name') or attempt.get("user_name") or f"Attempt {attempt_id}"
         if attempt_id != extra.attempt_id:
             raise HTTPError(
                 400,
                 "Номер попытки не совпадает в запросе.\nПожалуйста, вернитесь в Moodle и попробуйте запустить лабораторную работу снова."
             )
-        if attempt_id not in user.spawners:
+        if attempt_number not in user.spawners:
             self.log.info(f"Spawning server '{attempt_id}' for user {profile.email}")
             try:
                 await user.spawn(
-                    server_name=attempt_id,
+                    server_name=attempt_number,
                     options={"profile": attempt_id, "name": attempt_name}
                 )
             except Exception as e:
