@@ -33,7 +33,7 @@ class FirstStepHandler(BaseHandler):
         self.clear_login_cookie()
         self.statsd.incr('logout')
         query_string = self.request.query
-        self.redirect(f"{SecondStepHandler.route}?{query_string}")
+        self.redirect(f"{SecondStepHandler.route}?{query_string}", status=307)
 
 class SecondStepHandler(BaseHandler):
     """
@@ -109,7 +109,7 @@ class SecondStepHandler(BaseHandler):
             self.log.info(
                 f"Server '{attempt_number}' for user {user.name} is already ready, redirecting to lab"
             )
-            self.redirect(redirect_url)
+            self.redirect(redirect_url, status=307)
             return
 
         # Передаём user_options в spawner перед запуском
@@ -142,7 +142,7 @@ class SecondStepHandler(BaseHandler):
             server_name=attempt_number,
             next_url=redirect_url,
         )
-        self.redirect(pending_url)
+        self.redirect(pending_url, status=307)
 
     async def _spawn_in_background(
             self,
