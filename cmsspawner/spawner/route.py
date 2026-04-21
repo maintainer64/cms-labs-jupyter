@@ -36,7 +36,7 @@ class FirstStepHandler(BaseHandler):
         self.statsd.incr('logout')
         query_string = self.request.query
         html = await render_template(
-            template_name="auto_redirect.html",
+            template_name="auto_redirect.html.jinja2",
             redirect_url=f"{SecondStepHandler.route}?{query_string}"
         )
         return self.finish(html)
