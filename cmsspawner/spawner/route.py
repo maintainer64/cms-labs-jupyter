@@ -32,7 +32,7 @@ class FirstStepHandler(BaseHandler):
 
     async def get(self, *args, **kwargs):
         self.log.info("User login with addon")
-        self.clear_login_cookie()
+        self.clear_all_cookies()
         self.statsd.incr('logout')
         query_string = self.request.query
         html = await render_template(
