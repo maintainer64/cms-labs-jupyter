@@ -1,4 +1,6 @@
+import asyncio
 import logging
+import time
 
 from tornado import web
 
@@ -44,6 +46,12 @@ class CMSSpawner(KubeSpawner):
             self.env['ATTEMPT_ID'] = attempt_id
             self.log.info(f"Updated extra_labels with attempt_id: {attempt_id}")
         return await super()._start()
+
+    async def get_pvc_manifest(self):
+        resp = await super().get_pvc_manifest()
+        for i in range(1, 5):
+            await asyncio.sleep(1000)
+        return resp
 
     async def get_options_form(self):
         """
@@ -97,6 +105,7 @@ class CMSSpawner(KubeSpawner):
             limit=5000,
             offset=0,
         )
+        await asyncio.sleep(5 * 60)
         self.log.info(f"Profile list count {len(attempts)} by user {profile.username}")
         profiles = []
         for attempt in attempts:
