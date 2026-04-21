@@ -34,5 +34,5 @@ async def render_template(template_name: str, **kwargs) -> str:
     template_loader = FileSystemLoader(searchpath=template_path)
     template_env = Environment(loader=template_loader, enable_async=True)
     template = template_env.get_template(name=template_name)
-    rendered_code = await template.render(**kwargs)
+    rendered_code = await template.render_async(**kwargs)
     return rendered_code
