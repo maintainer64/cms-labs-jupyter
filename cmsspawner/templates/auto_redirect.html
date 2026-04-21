@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <title>Перенаправление</title>
+</head>
+<body>
+<p>Произойдёт автоматический переход к лабораторной работе. Пожалуйста, подождите...</p>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        window.location.href = "{{ redirect_url }}";
+    });
+</script>
+<noscript>
+    <meta http-equiv="refresh" content="0;url={{ redirect_url }}">
+</noscript>
+</body>
+</html>
