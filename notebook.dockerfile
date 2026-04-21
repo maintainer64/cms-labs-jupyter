@@ -8,7 +8,8 @@ RUN uv pip install \
     -r /tmp/requirements.txt \
     -i https://mirrors.aliyun.com/pypi/simple/ && \
     rm /tmp/requirements.txt
+# Предустановка русской локали для JupyterLab
 RUN mkdir -p /home/jovyan/.jupyter/lab/user-settings/@jupyterlab/translation-extension && \
     echo '{"locale": "ru_RU"}' > /home/jovyan/.jupyter/lab/user-settings/@jupyterlab/translation-extension/plugin.jupyterlab-settings && \
-    chown -R jovyan:jovyan /home/jovyan/.jupyter
+    chown -R jovyan: /home/jovyan/.jupyter
 USER ${NB_UID}
