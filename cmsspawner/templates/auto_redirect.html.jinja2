@@ -2,6 +2,7 @@
 <html lang="ru">
 <head>
     <title>Перенаправление</title>
+    <meta charset="UTF-8">
 </head>
 <body>
 <p>Произойдёт автоматический переход к лабораторной работе. Пожалуйста, подождите...</p>
@@ -22,7 +23,7 @@
 
     // Автоматический переход после загрузки DOM
     document.addEventListener('DOMContentLoaded', function () {
-        window.location.href = "{{ redirect_url }}";
+        //window.location.href = "{{ redirect_url }}";
     });
 </script>
 
