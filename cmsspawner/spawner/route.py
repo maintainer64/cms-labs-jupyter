@@ -1,6 +1,7 @@
 import asyncio
 import base64
 import json
+import os
 from dataclasses import dataclass
 from urllib.parse import urlencode
 
@@ -11,6 +12,8 @@ from tornado.web import HTTPError
 
 from cmsspawner.spawner.models import UserInfo
 from cmsspawner.spawner.rpc import CMSRpcClient
+
+TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "..", "templates")
 
 
 @dataclass
@@ -28,13 +31,16 @@ class FirstStepHandler(BaseHandler):
     """
     route = r"/pnet-lab-addon/api/v1/sso/login"
 
+    def get_template_path(self) -> str | None:
+        return TEMPLATE_DIR
+
     async def get(self, *args, **kwargs):
         self.log.info("User login with addon")
         self.clear_login_cookie()
         self.statsd.incr('logout')
         query_string = self.request.query
-        return self.render(
-            "auto_redirect.html",
+        return await self.render(
+            template_name="auto_redirect.html",
             redirect_url=f"{SecondStepHandler.route}?{query_string}"
         )
 
