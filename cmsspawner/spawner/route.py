@@ -124,6 +124,10 @@ class SecondStepHandler(BaseHandler):
             "redirect_url": finish_redirect_url,
         })
 
+    def check_xsrf_cookie(self):
+        """Отключаем XSRF для этого handler'а — аутентификация через @web.authenticated"""
+        pass
+
     async def get_user_profile(self) -> UserInfo | None:
         """
         Получает профиль текущего пользователя из данных токена CMS
