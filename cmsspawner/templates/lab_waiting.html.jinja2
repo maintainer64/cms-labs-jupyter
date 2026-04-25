@@ -358,6 +358,9 @@
             $("main-title").textContent = `«${(attemptData.lti_routing_name || "").toLowerCase()}» готова!`;
             $("main-sub").textContent = "Переходим в лабораторию…";
             log(`Переход: ${redirect_url}`);
+            if (localStorage.getItem('lab_waiting_debug') === 'true') {
+                return;
+            }
             await sleep(800);
             window.location.href = redirect_url;
 
