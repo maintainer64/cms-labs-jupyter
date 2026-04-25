@@ -2,6 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
+    <meta name="xsrf-token" content="{{ xsrf_token }}">
     <title>Подготовка лабораторной работы…</title>
     <style>
         *, *::before, *::after {
@@ -217,8 +218,7 @@
     // ── API helpers ───────────────────────────────────────────────────────────
 
     function getXSRF() {
-        const m = document.cookie.match(/(?:^|;\s*)_xsrf=([^;]+)/);
-        return m ? decodeURIComponent(m[1]) : "";
+        return document.querySelector('meta[name="xsrf-token"]').getAttribute("content");
     }
 
     async function apiPost(url, body = {}) {

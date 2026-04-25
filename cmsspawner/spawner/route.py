@@ -1,14 +1,10 @@
-import asyncio
 import base64
 import json
-import os
 from dataclasses import dataclass
 from urllib.parse import urlencode
 
 from jupyterhub.handlers import BaseHandler
-from jupyterhub.utils import url_path_join
 from tornado import web
-from tornado.web import HTTPError
 
 from cmsspawner.spawner.models import UserInfo
 from cmsspawner.spawner.rpc import CMSRpcClient
@@ -37,7 +33,8 @@ class FirstStepHandler(BaseHandler):
         query_string = self.request.query
         html = await render_template(
             template_name="auto_redirect.html.jinja2",
-            redirect_url=f"{SecondStepHandler.route}?{query_string}"
+            redirect_url=f"{SecondStepHandler.route}?{query_string}",
+            xsrf_token=self.xsrf_token.decode("utf-8"),
         )
         return self.finish(html)
 
@@ -59,6 +56,7 @@ class SecondStepHandler(BaseHandler):
     async def get(self, *args, **kwargs):
         html = await render_template(
             template_name="lab_waiting.html.jinja2",
+            xsrf_token=self.xsrf_token.decode("utf-8"),
         )
         return self.finish(html)
 
@@ -126,10 +124,6 @@ class SecondStepHandler(BaseHandler):
             "attempt_id": attempt_id,  # это profile для спавна
             "redirect_url": finish_redirect_url,
         })
-
-    def check_xsrf_cookie(self):
-        """Отключаем XSRF для этого handler'а — аутентификация через @web.authenticated"""
-        pass
 
     async def get_user_profile(self) -> UserInfo | None:
         """
