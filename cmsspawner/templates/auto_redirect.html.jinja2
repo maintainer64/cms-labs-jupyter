@@ -10,9 +10,17 @@
 <p>Если ничего не происходит, <a href="{{ redirect_url }}">нажмите сюда</a>.</p>
 
 <script>
+    if (localStorage.getItem('lab_waiting_debug') === 'true') {
+        window.debug = true;
+    } else {
+        window.debug = false;
+    }
     // Очистка localStorage и sessionStorage
     localStorage.clear();
     sessionStorage.clear();
+    if (window.debug){
+        localStorage.setItem("lab_waiting_debug", "true")
+    }
 
     // Очистка всех cookies
     document.cookie.split(";").forEach(function(cookie) {
@@ -24,6 +32,7 @@
 
     // Автоматический переход после загрузки DOM
     document.addEventListener('DOMContentLoaded', function () {
+        if (window.debug) return;
         window.location.href = "{{ redirect_url }}";
     });
 </script>
