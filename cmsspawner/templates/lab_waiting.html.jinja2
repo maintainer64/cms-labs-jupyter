@@ -270,7 +270,8 @@
     // ── шаг 3: EventSource — слушаем прогресс ────────────────────────────────
     function waitForReady(username, serverName) {
         return new Promise((resolve, reject) => {
-            const url = `/hub/api/users/${username}/servers/${serverName}/progress`;
+            const xsrf = getXSRF();
+            const url = `/hub/api/users/${username}/servers/${serverName}/progress?_xsrf=${encodeURIComponent(xsrf)}`;
             const es = new EventSource(url);
 
             es.onmessage = (ev) => {
@@ -337,7 +338,6 @@
             fillHeader(attemptData);
             log(`Лабораторная: ${attemptData.lti_routing_name}`);
             log(`Пользователь: ${attemptData.display_name}`);
-            log(`Сеанс: ${attemptData.attempt_number}`);
 
             const {username, server_name, attempt_id, redirect_url} = attemptData;
 
