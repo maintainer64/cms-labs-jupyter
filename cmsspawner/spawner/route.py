@@ -66,24 +66,27 @@ class SecondStepHandler(BaseHandler):
     async def post(self, *args, **kwargs):
         profile = await self.get_user_profile()
         if not profile:
-            raise HTTPError(
-                400,
-                "Отсутствует профиль пользователя."
-            )
+            self.set_status(400)
+            return self.finish({
+                "error": "Отсутствует профиль пользователя."
+            })
 
         user = await self.get_current_user()
         if not user:
-            raise HTTPError(401, "Пользователь не авторизован")
+            self.set_status(400)
+            return self.finish({
+                "error": "Пользователь не авторизован"
+            })
 
         self.log.info(f"User {profile.email} second step with addon")
 
         extra = self.get_params_extra()
         if not extra:
             self.log.error(f"Failed to get extra params by user {profile.email}")
-            raise HTTPError(
-                400,
-                "Параметры лабораторной работы неверные."
-            )
+            self.set_status(400)
+            return self.finish({
+                "error": "Параметры лабораторной работы неверные."
+            })
 
         rpc_client = CMSRpcClient()
         attempts = await rpc_client.list_attempts(
@@ -95,20 +98,20 @@ class SecondStepHandler(BaseHandler):
         )
 
         if not attempts:
-            raise HTTPError(
-                400,
-                "Отсутсвует номер попытки."
-            )
+            self.set_status(400)
+            return self.finish({
+                "error": "Отсутсвует номер попытки."
+            })
 
         attempt = attempts[0]
         attempt_id = attempt["attempt_id"]
         attempt_number = str(attempt["id"])
 
         if attempt_id != extra.attempt_id:
-            raise HTTPError(
-                400,
-                "Номер попытки не совпадает в запросе."
-            )
+            self.set_status(400)
+            return self.finish({
+                "error": "Номер попытки не совпадает в запросе."
+            })
         finish_redirect_url = self.get_redirect_complete_params(
             server_name=attempt_number,
             username=user.name,

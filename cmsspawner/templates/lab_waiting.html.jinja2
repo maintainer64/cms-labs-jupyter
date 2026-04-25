@@ -241,14 +241,7 @@
     // ── шаг 1: POST на текущий URL — получаем данные попытки ─────────────────
     async function fetchAttemptData() {
         log("Запрашиваем данные попытки…");
-
-        const url = new URL(window.location.href);
-        const extra = url.searchParams.get("extra");
-
-        const res = await apiPost(window.location.pathname, {
-            extra: extra
-        });
-
+        const res = await apiPost(window.location.href);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Ошибка получения данных попытки");
         return data;
