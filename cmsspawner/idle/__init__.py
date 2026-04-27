@@ -89,11 +89,11 @@ async def main():
         # Для всех остальных статусов - отправляем активное состояние
         logger.info(f"Sending active state for attempt {attempt_number} (status={attempt_status})")
         cms_attempt_request_list.append(cms_attempt_request)
-    if not cms_attempt_request_list:
+    if cms_attempt_request_list:
+        logger.info(f"Sending active state for all attempts {len(cms_attempt_request_list)}")
+        await rpc_client.update_attempts(models=cms_attempt_request_list)
+    else:
         logger.info(f"No server JupyterHub found for all attempts")
-        return len(cms_attempt_request_list)
-    logger.info(f"Sending active state for all attempts {len(cms_attempt_request_list)}")
-    await rpc_client.update_attempts(models=cms_attempt_request_list)
     await rpc_client.close()
     await jupyterhub_client.close()
     return len(cms_attempt_request_list)
