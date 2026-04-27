@@ -806,7 +806,7 @@ cull:
   maxAge: 0 # --max-age
 
 debug:
-  enabled: true
+  enabled: false
 
 global:
   safeToShowValues: false
