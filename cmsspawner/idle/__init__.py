@@ -63,7 +63,11 @@ async def main():
             logger.info(f"Attempt {attempt_number} id={attempt_id} completed, skipping")
             continue
         # Если нет сервера с таким номером попытки — сообщаем и завершаем обработку
-        if attempt_status != "pending" and attempt_number not in servers_by_attempt:
+        if attempt_number not in servers_by_attempt:
+            # Если pending, то возможно запрос ещё не дошёл
+            if attempt_status == "pending":
+                logger.info(f"No server JupyterHub found for attempt {attempt_number} (id={attempt_id}). But pending")
+                continue
             logger.info(f"No server JupyterHub found for attempt {attempt_number} (id={attempt_id})")
             cms_attempt_request["status"] = "completed"
             cms_attempt_request_list.append(cms_attempt_request)
