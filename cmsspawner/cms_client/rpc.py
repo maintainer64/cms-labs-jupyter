@@ -20,7 +20,6 @@ class CMSRpcClient:
 
     def __init__(self):
         self.base_url = self.base_url.rstrip('/')
-        self._owned_session = self._session is None
 
     @property
     def auth_header(self) -> str:
@@ -35,9 +34,8 @@ class CMSRpcClient:
 
     async def close(self) -> None:
         """Закрыть собственную сессию, если она была создана внутри."""
-        if self._owned_session and self._session:
-            await self._session.close()
-            self._session = None
+        await self._session.close()
+        self._session = None
 
     async def _request(self, method: str, params: Dict[str, Any]) -> Dict[str, Any]:
         """Выполнить JSON‑RPC запрос и вернуть результат (или выбросить исключение)."""

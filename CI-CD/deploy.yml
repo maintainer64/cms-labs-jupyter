@@ -10,6 +10,7 @@ deploy:
   script:
     - export VERSION="$(cat ./VERSION)"
     - cd k8s
+    - envsubst < "cron.template.yaml" > "cron.yaml"
     - envsubst < "values.template.yaml" > "values.yaml"
     - envsubst < "ingress-http.template.yaml" > "ingress-http.yaml"
     - envsubst < "ingress-https.template.yaml" > "ingress-https.yaml"
@@ -28,6 +29,7 @@ deploy:
       --values values.yaml
     - kubectl replace --force -f ingress-http.yaml
     - kubectl replace --force -f ingress-https.yaml
+    - kubectl replace --force -f cron.yaml
     - kubectl label namespace jupyter pod-security.kubernetes.io/enforce=privileged
 
   environment:

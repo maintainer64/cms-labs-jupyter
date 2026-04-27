@@ -88,22 +88,14 @@ class JupyterHubClient:
     PAGINATION_ACCEPT_HEADER = "application/jupyterhub-pagination+json"
     hub_url: str = ""
     api_token: str = ""
-    session: aiohttp.ClientSession | None = None
-    request_timeout: int | float = 60
+    _session: aiohttp.ClientSession | None = None
+    _request_timeout: int | float = 60
 
     def __init__(
             self,
     ) -> None:
         self.hub_url = self.hub_url.rstrip("/")
-        self._owned_session = self.session is None
-        self._timeout = aiohttp.ClientTimeout(total=self.request_timeout)
-
-    async def __aenter__(self) -> JupyterHubClient:
-        await self._get_session()
-        return self
-
-    async def __aexit__(self, *exc_info: object) -> None:
-        await self.close()
+        self._timeout = aiohttp.ClientTimeout(total=self._request_timeout)
 
     @property
     def _headers(self) -> dict[str, str]:
@@ -114,15 +106,11 @@ class JupyterHubClient:
     async def _get_session(self) -> aiohttp.ClientSession:
         if self._session is None or self._session.closed:
             self._session = aiohttp.ClientSession()
-
         return self._session
 
     async def close(self) -> None:
         """Закрывает внутреннюю aiohttp-сессию, если клиент создал её сам."""
-
-        if self._owned_session and self._session and not self._session.closed:
-            await self._session.close()
-
+        await self._session.close()
         self._session = None
 
     def _make_url(self, path_or_url: str) -> str:

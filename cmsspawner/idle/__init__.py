@@ -89,4 +89,6 @@ async def main():
         return len(cms_attempt_request_list)
     logger.info(f"Sending active state for all attempts {len(cms_attempt_request_list)}")
     await rpc_client.update_attempts(models=cms_attempt_request_list)
+    await rpc_client.close()
+    await jupyterhub_client.close()
     return len(cms_attempt_request_list)
