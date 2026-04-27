@@ -3,8 +3,9 @@ import logging
 from cmsspawner.cms_client.rpc import CMSRpcClient
 from cmsspawner.idle.vault import vault_init
 from cmsspawner.jupyter_client.client import JupyterHubClient
+from cmsspawner.spawner.utils import setup_logger
 
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__, logging.INFO)
 
 
 async def clear_server(
