@@ -54,7 +54,6 @@ def vault_init(c):
     # Подключаем Middleware для hub
     from .restricted import FORBIDDEN_PATTERNS  # noqa
     # Подключаем IDLE сервис
-    c.JupyterHub.services = []
     idle_api_token = secrets.get("IDLE_API_TOKEN", "")
     if idle_api_token:
         c.JupyterHub.services.append({
