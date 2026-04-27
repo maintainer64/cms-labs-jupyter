@@ -103,5 +103,5 @@ class CMSRpcClient:
         :return: количество обновлённых записей (count)
         """
         params = {"models": models}
-        result = await self._request("lti_attempt.update", params)
+        result = await self._request("lti_attempt.update_external", params)
         return result.get("count", 0)
