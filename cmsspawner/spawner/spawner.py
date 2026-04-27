@@ -1,13 +1,10 @@
-import asyncio
 import logging
-import time
-
-from tornado import web
 
 from kubespawner import KubeSpawner
+from tornado import web
+from cmsspawner.cms_client.rpc import CMSRpcClient
 
 from .models import UserInfo
-from .rpc import CMSRpcClient
 from .utils import setup_logger
 
 

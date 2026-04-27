@@ -18,11 +18,8 @@ async def middleware_restricted(self):
     # Проверяем совпадение пути с любым из паттернов
     path = self.request.path
     if any(p.match(path) for p in FORBIDDEN_PATTERNS):
-        # Если пользователь не админ — блокируем доступ
         raise web.HTTPError(403, "Доступ к странице ограничен")
-
     return await original_prepare(self)
-
 
 # Подменяем метод во всех обработчиках
 BaseHandler.prepare = middleware_restricted

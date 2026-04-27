@@ -7,7 +7,7 @@ from jupyterhub.handlers import BaseHandler
 from tornado import web
 
 from cmsspawner.spawner.models import UserInfo
-from cmsspawner.spawner.rpc import CMSRpcClient
+from cmsspawner.cms_client.rpc import CMSRpcClient
 from cmsspawner.spawner.utils import render_template
 
 

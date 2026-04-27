@@ -1,9 +1,10 @@
 import json
 import os
+import sys
 
 from .route import FirstStepHandler, SecondStepHandler
 from .spawner import CMSSpawner
-from .rpc import CMSRpcClient
+from cmsspawner.cms_client.rpc import CMSRpcClient
 
 
 def extract_display_name(authenticator, handler, authentication):
@@ -52,3 +53,12 @@ def vault_init(c):
     c.JupyterHub.spawner_class = CMSSpawner
     # Подключаем Middleware для hub
     from .restricted import FORBIDDEN_PATTERNS  # noqa
+    # Подключаем IDLE сервис
+    c.JupyterHub.services = []
+    idle_api_token = secrets.get("IDLE_API_TOKEN", "")
+    if idle_api_token:
+        c.JupyterHub.services.append({
+            "name": "idle",
+            "api_token": idle_api_token,
+            "admin": True,
+        })
