@@ -7,6 +7,6 @@ RUN uv pip install \
     --no-cache-dir \
     -r /tmp/requirements.txt \
     -i https://mirrors.aliyun.com/pypi/simple/ && \
-    rm /tmp/requirements.txt \
+    rm /tmp/requirements.txt
 COPY notebook.entrypoint.sh /usr/local/bin/notebook.entrypoint.sh
 USER ${NB_UID}
