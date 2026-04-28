@@ -1,0 +1,24 @@
+# Отображение/Вычисления
+pandas  # Нужен для таблиц
+numpy  # Фундамент для вычислений
+matplotlib  # Графики
+pillow  # Отображение фото в блокноте
+
+# Сетевые зависимости
+paramiko  # Подключение по sshV2
+pysnmp  # SNMP сервер времени
+requests  # HTTP запросы
+
+# Интерфейс
+jupyterlab-language-pack-ru-RU  # Языковой пакет
+ipywidgets  # Виджеты для блокнота
+
+# Разработка
+pipdeptree  # Покажет дерево зависимостей
+jupyter-collaboration  # Покажет человек которые сидят в блокноте
+jupyterlab-execute-time  # Сколько времени работала ячейка
+jupyter-resource-usage  # Текущее потребление блокнота
+nbgitpuller  # Скачивает git репозитории
+
+# Jupyterhub
+jupyterhub==5.4.4

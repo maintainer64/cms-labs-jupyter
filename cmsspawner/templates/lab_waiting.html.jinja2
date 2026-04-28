@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="xsrf-token" content="{{ xsrf_token }}">
+    <title>Подготовка лабораторной работы…</title>
+    <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #0f1117;
+            color: #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .card {
+            background: #1a1d27;
+            border: 1px solid #2a2d3e;
+            border-radius: 16px;
+            padding: 48px 56px;
+            width: 100%;
+            max-width: 640px;
+            box-shadow: 0 24px 64px rgba(0, 0, 0, .5);
+        }
+
+        /* ---------- spinner ---------- */
+        .spinner-wrap {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 32px;
+        }
+
+        .spinner {
+            width: 64px;
+            height: 64px;
+            border: 5px solid #2a2d3e;
+            border-top-color: #5b8af5;
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* ---------- текст статуса ---------- */
+        h1 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 8px;
+            color: #fff;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #8892b0;
+            font-size: .9rem;
+            margin-bottom: 32px;
+        }
+
+        /* ---------- шаги ---------- */
+        .steps {
+            list-style: none;
+            margin-bottom: 28px;
+        }
+
+        .steps li {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid #2a2d3e;
+            font-size: .9rem;
+            color: #8892b0;
+            transition: color .3s;
+        }
+
+        .steps li:last-child {
+            border-bottom: none;
+        }
+
+        .steps li.active {
+            color: #5b8af5;
+        }
+
+        .steps li.done {
+            color: #4ade80;
+        }
+
+        .steps li.error {
+            color: #f87171;
+        }
+
+        .step-icon {
+            width: 22px;
+            height: 22px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: .75rem;
+            background: #2a2d3e;
+            transition: background .3s;
+        }
+
+        .active .step-icon {
+            background: #1e3a8a;
+        }
+
+        .done .step-icon {
+            background: #166534;
+        }
+
+        .error .step-icon {
+            background: #7f1d1d;
+        }
+
+        /* ---------- лог ---------- */
+        .log-box {
+            background: #0d0f18;
+            border: 1px solid #2a2d3e;
+            border-radius: 8px;
+            padding: 12px 16px;
+            height: 160px;
+            overflow-y: auto;
+            font-family: "JetBrains Mono", "Fira Code", monospace;
+            font-size: .78rem;
+            line-height: 1.6;
+            color: #64748b;
+        }
+
+        .log-box .log-line {
+            color: #94a3b8;
+        }
+
+        .log-box .log-err {
+            color: #f87171;
+        }
+
+        /* ---------- ошибка ---------- */
+        .error-block {
+            display: none;
+            margin-top: 20px;
+            padding: 14px 18px;
+            background: rgba(248, 113, 113, .1);
+            border: 1px solid #f87171;
+            border-radius: 8px;
+            color: #f87171;
+            font-size: .875rem;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="spinner-wrap">
+        <div class="spinner" id="spinner"></div>
+    </div>
+
+    <h1 id="main-title">Подготовка лабораторной работы…</h1>
+    <p class="subtitle" id="main-sub">Пожалуйста, не закрывайте страницу</p>
+
+    <ul class="steps" id="steps">
+        <li id="step-init" class="active"><span class="step-icon">⬤</span> Получение данных попытки</li>
+        <li id="step-spawn"><span class="step-icon">⬤</span> Запуск рабочего окружения</li>
+        <li id="step-progress"><span class="step-icon">⬤</span> Ожидание готовности сервера</li>
+        <li id="step-redirect"><span class="step-icon">⬤</span> Переход в лабораторию</li>
+    </ul>
+
+    <div class="log-box" id="log-box">
+        <div class="log-line">Инициализация…</div>
+    </div>
+
+    <div class="error-block" id="error-block"></div>
+</div>
+
+<script>
+    // ── helpers ──────────────────────────────────────────────────────────────
+    const $ = id => document.getElementById(id);
+
+    function log(text, isError = false) {
+        const box = $("log-box");
+        const line = document.createElement("div");
+        line.className = isError ? "log-err" : "log-line";
+        line.textContent = text;
+        box.appendChild(line);
+        box.scrollTop = box.scrollHeight;
+    }
+
+    function setStep(stepId, state) {
+        const icons = {active: "⬤", done: "✓", error: "✗"};
+        const el = $(stepId);
+        el.className = state;
+        el.querySelector(".step-icon").textContent = icons[state];
+    }
+
+    function showError(msg) {
+        $("spinner").style.display = "none";
+        $("main-title").textContent = "Произошла ошибка";
+        $("main-sub").textContent = "Вернитесь в Moodle и попробуйте снова";
+        const eb = $("error-block");
+        eb.textContent = msg;
+        eb.style.display = "block";
+    }
+
+    // ── API helpers ───────────────────────────────────────────────────────────
+
+    function getXSRF() {
+        return document.querySelector('meta[name="xsrf-token"]').getAttribute("content");
+    }
+
+    async function apiPost(url, body = {}) {
+        return fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-XSRFToken": getXSRF(),
+            },
+            body: JSON.stringify(body),
+        });
+    }
+
+    async function apiGet(url) {
+        return fetch(url, {headers: {"X-XSRFToken": getXSRF()}});
+    }
+
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+    // ── шаг 1: POST на текущий URL — получаем данные попытки ─────────────────
+    async function fetchAttemptData() {
+        log("Запрашиваем данные попытки…");
+        const res = await apiPost(window.location.href);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Ошибка получения данных попытки");
+        return data;
+    }
+
+    // ── шаг 2: спавним named server через Hub API ─────────────────────────────
+    async function spawnServer(username, serverName, attemptId) {
+        log(`Запускаем сервер "${serverName}"…`);
+        const url = `/hub/api/users/${username}/servers/${serverName}`;
+        const res = await apiPost(url, {profile: attemptId});
+
+        if (res.status === 400) {
+            const body = await res.json().catch(() => ({}));
+            if (/already/i.test(body.message || "")) {
+                log("Сервер уже запущен, пропускаем спавн.");
+                return;
+            }
+        }
+        if (![201, 202, 400].includes(res.status)) {
+            const body = await res.json().catch(() => ({}));
+            throw new Error(body.message || `HTTP ${res.status} при запуске сервера`);
+        }
+        log("Сервер запускается…");
+    }
+
+    // ── шаг 3: EventSource — слушаем прогресс ────────────────────────────────
+    function waitForReady(username, serverName) {
+        return new Promise((resolve, reject) => {
+            const xsrf = getXSRF();
+            const url = `/hub/api/users/${username}/servers/${serverName}/progress?_xsrf=${encodeURIComponent(xsrf)}`;
+            const es = new EventSource(url);
+
+            es.onmessage = (ev) => {
+                try {
+                    const msg = JSON.parse(ev.data);
+                    if (msg.message) log(msg.message);
+                    if (msg.ready) {
+                        es.close();
+                        resolve();
+                    }
+                    if (msg.failed) {
+                        es.close();
+                        reject(new Error(msg.message || "Сервер завершил работу с ошибкой"));
+                    }
+                } catch (_) {
+                }
+            };
+
+            es.onerror = () => {
+                es.close();
+                checkReadyFallback(username, serverName).then(resolve).catch(reject);
+            };
+
+            setTimeout(() => {
+                es.close();
+                reject(new Error("Превышено время ожидания запуска сервера (10 мин)"));
+            }, 600_000);
+        });
+    }
+
+    async function checkReadyFallback(username, serverName, attempts = 30) {
+        for (let i = 0; i < attempts; i++) {
+            await sleep(3000);
+            const res = await apiGet(`/hub/api/users/${username}`);
+            if (!res.ok) continue;
+            const data = await res.json();
+            const srv = (data.servers || {})[serverName];
+            if (srv && srv.ready) return;
+        }
+        throw new Error("Сервер не стал готов за отведённое время");
+    }
+
+    // ── обновляем шапку карточки после получения данных ──────────────────────
+    function fillHeader(data) {
+        // "подготовка запуска лабораторной работы <название> для пользователя <имя>"
+        const labName = (data.lti_routing_name || "").toLowerCase();
+
+        $("main-title").textContent =
+            `Подготовка запуска лабораторной работы «${labName}» ` +
+            `для пользователя ${data.display_name}`;
+
+        $("main-sub").textContent = `Сеанс № ${data.attempt_number}`;
+    }
+
+    // ── main ─────────────────────────────────────────────────────────────────
+    async function main() {
+        try {
+            // шаг 1 — данные попытки
+            setStep("step-init", "active");
+            const attemptData = await fetchAttemptData();
+            setStep("step-init", "done");
+
+            // заполняем шапку реальными данными
+            fillHeader(attemptData);
+            log(`Лабораторная: ${attemptData.lti_routing_name}`);
+            log(`Пользователь: ${attemptData.display_name}`);
+
+            const {username, server_name, attempt_id, redirect_url} = attemptData;
+
+            // шаг 2 — спавн
+            setStep("step-spawn", "active");
+            await spawnServer(username, server_name, attempt_id);
+            setStep("step-spawn", "done");
+
+            // шаг 3 — ожидание готовности
+            setStep("step-progress", "active");
+            log("Ожидаем готовности сервера…");
+            await waitForReady(username, server_name);
+            setStep("step-progress", "done");
+            log("Сервер готов!");
+
+            // шаг 4 — редирект
+            setStep("step-redirect", "active");
+            $("main-title").textContent = `«${(attemptData.lti_routing_name || "").toLowerCase()}» готова!`;
+            $("main-sub").textContent = "Переходим в лабораторию…";
+            log(`Переход: ${redirect_url}`);
+            if (localStorage.getItem('lab_waiting_debug') === 'true') {
+                return;
+            }
+            await sleep(800);
+            window.location.href = redirect_url;
+
+        } catch (err) {
+            ["step-init", "step-spawn", "step-progress", "step-redirect"].forEach(id => {
+                if ($(id).className === "active") setStep(id, "error");
+            });
+            log(err.message, true);
+            showError(err.message);
+        }
+    }
+
+    main();
+</script>
+</body>
+</html>
