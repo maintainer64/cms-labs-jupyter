@@ -113,7 +113,7 @@ class SecondStepHandler(BaseHandler):
         finish_redirect_url = self.get_redirect_complete_params(
             server_name=attempt_number,
             username=user.name,
-            lab_url=extra.pnet_labs_path,
+            lab_url=extra.labs_path,
         )
         return self.finish({
             "attempt_number": attempt_number,
