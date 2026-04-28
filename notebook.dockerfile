@@ -7,9 +7,6 @@ RUN uv pip install \
     --no-cache-dir \
     -r /tmp/requirements.txt \
     -i https://mirrors.aliyun.com/pypi/simple/ && \
-    rm /tmp/requirements.txt
-# Предустановка русской локали для JupyterLab
-RUN mkdir -p /home/jovyan/.jupyter/lab/user-settings/@jupyterlab/translation-extension && \
-    echo '{"locale": "ru_RU"}' > /home/jovyan/.jupyter/lab/user-settings/@jupyterlab/translation-extension/plugin.jupyterlab-settings && \
-    chown -R jovyan: /home/jovyan/.jupyter
+    rm /tmp/requirements.txt \
+COPY notebook.entrypoint.sh /usr/local/bin/notebook.entrypoint.sh
 USER ${NB_UID}

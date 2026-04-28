@@ -455,7 +455,10 @@ singleuser:
     hub.jupyter.org/network-access-hub: "true"
   extraFiles: { }
   extraEnv: { }
-  lifecycleHooks: { }
+  lifecycleHooks:
+    postStart:
+      exec:
+        command: ["/usr/local/bin/notebook.entrypoint.sh"]
   initContainers: [ ]
   extraContainers: [ ]
   allowPrivilegeEscalation: false
