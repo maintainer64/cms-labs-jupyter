@@ -14,7 +14,7 @@ from cmsspawner.spawner.utils import render_template
 @dataclass
 class SSOTokenPublicExtraParams:
     attempt_id: str = ""
-    pnet_labs_path: str = ""
+    labs_path: str = ""
 
 
 class FirstStepHandler(BaseHandler):
@@ -159,11 +159,11 @@ class SecondStepHandler(BaseHandler):
             extra_params = json.loads(decoded_bytes.decode("utf-8"))
 
             attempt_id = extra_params.get("attempt_id", "") or ""
-            pnet_labs_path = extra_params.get("pnet_labs_path", "") or ""
+            labs_path = extra_params.get("labs_path", "") or ""
 
             return SSOTokenPublicExtraParams(
                 attempt_id=attempt_id,
-                pnet_labs_path=pnet_labs_path,
+                labs_path=labs_path,
             )
         except Exception as e:
             self.log.error(f"Failed to decode extra param: {e}")
