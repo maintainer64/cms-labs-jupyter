@@ -8,6 +8,7 @@ pillow  # Отображение фото в блокноте
 paramiko  # Подключение по sshV2
 pysnmp  # SNMP сервер времени
 requests  # HTTP запросы
+ncclient  # NETCONF протокол
 
 # Интерфейс
 jupyterlab-language-pack-ru-RU  # Языковой пакет
