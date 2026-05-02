@@ -4,6 +4,12 @@ metadata:
   name: hub-namespace-topology-manager
 rules:
   - apiGroups: [ "" ]
+    resources: [ "pods", "persistentvolumeclaims", "secrets", "services" ]
+    verbs: [ "get", "watch", "list", "create", "delete" ]
+  - apiGroups: [ "" ]
+    resources: [ "events" ]
+    verbs: [ "get", "watch", "list" ]
+  - apiGroups: [ "" ]
     resources: [ "namespaces" ]
     verbs: [ "get", "list", "watch", "create", "delete" ]
   - apiGroups: [ "clabernetes.containerlab.dev" ]

@@ -44,5 +44,5 @@ class GitClient:
             async with session.get(url) as resp:
                 if resp.status != 200:
                     continue
-                return resp.text()
+                return await resp.text()
         return None
