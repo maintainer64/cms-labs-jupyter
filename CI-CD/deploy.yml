@@ -14,6 +14,7 @@ deploy:
     - envsubst < "values.template.yaml" > "values.yaml"
     - envsubst < "ingress-http.template.yaml" > "ingress-http.yaml"
     - envsubst < "ingress-https.template.yaml" > "ingress-https.yaml"
+    - envsubst < "role.template.yaml" > "role.yaml"
     - echo "$K8S_CONFIG" | base64 -d > kubeconfig.yaml
     - export KUBECONFIG=$PWD/kubeconfig.yaml
     - helm repo add jupyterhub https://hub.jupyter.org/helm-chart/
@@ -29,6 +30,7 @@ deploy:
       --values values.yaml
     - kubectl replace --force -f ingress-http.yaml
     - kubectl replace --force -f ingress-https.yaml
+    - kubectl replace --force -f role.yaml
     - kubectl replace --force -f cron.yaml
     - kubectl label namespace jupyter pod-security.kubernetes.io/enforce=privileged
 
