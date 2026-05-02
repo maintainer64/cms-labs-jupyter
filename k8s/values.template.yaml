@@ -69,6 +69,7 @@ hub:
       k8s_api_request_retry_timeout: 120
       start_timeout: 600
       http_timeout: 600
+      hub_connect_url: "http://hub.$K8S_NAMESPACE.svc.cluster.local:8081"
 
   service:
     type: ClusterIP
