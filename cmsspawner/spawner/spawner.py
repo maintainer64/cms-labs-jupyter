@@ -112,7 +112,7 @@ class CMSSpawner(KubeSpawner):
                 plural = kind.lower() + "s"
 
                 # 3. Выполняем запрос через универсальный CustomObjectsApi
-                custom_api = client.CustomObjectsApi(self.api)
+                custom_api = client.CustomObjectsApi(api_client=self.api)
 
                 await asyncio.wait_for(
                     custom_api.create_namespaced_custom_object(
