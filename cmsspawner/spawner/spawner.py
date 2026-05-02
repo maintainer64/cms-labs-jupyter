@@ -106,7 +106,10 @@ class CMSSpawner(KubeSpawner):
                 group, version = api_version.split('/', 1)  # clabernetes.containerlab.dev / v1alpha1
 
                 # plural для Topology = topologies
-                plural = kind.lower() + 'ies' if kind.endswith('y') else kind.lower() + 's'
+                if kind.endswith('y'):
+                    plural = kind[:-1].lower() + 'ies'  # Topology -> topologies
+                else:
+                    plural = kind.lower() + 's'
 
                 self.log.info(f"Applying {idx}/{len(manifests)}: {kind}/{name} in namespace {namespace}")
 
