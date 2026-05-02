@@ -4,6 +4,7 @@ import logging
 import yaml
 from kubernetes_asyncio import utils, client
 from kubernetes_asyncio.client import ApiException
+from kubernetes_asyncio.client.api.custom_objects_api import CustomObjectsApi
 from kubespawner import KubeSpawner
 from tornado import web
 
@@ -79,62 +80,55 @@ class CMSSpawner(KubeSpawner):
         return None
 
     async def _apply_manifests(self, yaml_content: str):
-        """Применяет Kubernetes манифесты из YAML (аналог kubectl apply -f)
-        Поддерживает как стандартные ресурсы, так и CRD (Containerlab).
-        """
-        # Загружаем все манифесты и убираем пустые блоки (None)
-        manifests = [m for m in yaml.safe_load_all(yaml_content) if m]
-        total = len(manifests)
-        kind = ""
+        """Применяет Kubernetes манифесты из YAML (аналог kubectl apply -f)"""
+        manifests = list(yaml.safe_load_all(yaml_content))
+        custom_api = CustomObjectsApi(api_client=self.api.api_client)
 
         for idx, manifest in enumerate(manifests, start=1):
+            if not manifest:
+                continue
+            kind, name = "", ""
             try:
-                # 1. Подготовка метаданных
-                kind = manifest.get('kind', "")
-                api_version = manifest.get('apiVersion', '')
-
                 if 'metadata' not in manifest:
                     manifest['metadata'] = {}
                 if 'namespace' not in manifest['metadata']:
                     manifest['metadata']['namespace'] = self.namespace
 
-                self.log.info(f"Topology file applying... {idx}/{total} [{kind}]")
+                # Для вашего YAML:
+                # apiVersion: clabernetes.containerlab.dev/v1alpha1
+                # kind: Topology
+                api_version = manifest.get('apiVersion', '')
+                kind = manifest.get('kind', '')
+                name = manifest.get('metadata', {}).get('name', 'Unknown')
+                namespace = manifest['metadata']['namespace']
 
-                # 2. Определяем параметры для API
-                # Разделяем apiVersion на group и version (например, 'apps/v1' или 'v1')
-                if '/' in api_version:
-                    group, version = api_version.split('/')
-                else:
-                    group, version = "", api_version
+                # Парсим group/version
+                group, version = api_version.split('/', 1)  # clabernetes.containerlab.dev / v1alpha1
 
-                # Для CustomObjectsApi нужно plural имя (обычно это kind во множественном числе)
-                # Для Containerlab -> containerlabs, Deployment -> deployments
-                plural = kind.lower() + "s"
+                # plural для Topology = topologies
+                plural = kind.lower() + 'ies' if kind.endswith('y') else kind.lower() + 's'
 
-                # 3. Выполняем запрос через универсальный CustomObjectsApi
-                custom_api = client.CustomObjectsApi(api_client=self.api)
+                self.log.info(f"Applying {idx}/{len(manifests)}: {kind}/{name} in namespace {namespace}")
 
                 await asyncio.wait_for(
                     custom_api.create_namespaced_custom_object(
                         group=group,
                         version=version,
-                        namespace=self.namespace,
+                        namespace=namespace,
                         plural=plural,
-                        body=manifest
+                        body=manifest,
                     ),
                     timeout=self.k8s_api_request_timeout,
                 )
 
+                self.log.info(f"Successfully applied {idx}/{len(manifests)}: {kind}/{name}")
+
             except ApiException as e:
                 if e.status == 409:
-                    self.log.info(f"Resource {kind} already exists, skipping...")
+                    self.log.info(f"Resource {kind}/{name} already exists in {namespace}, skipping")
                 else:
-                    self.log.exception(f"Failed to create topology resource {kind} in {self.namespace}")
+                    self.log.exception(f"Failed to create {kind}/{name} in {namespace}")
                     raise
-            except Exception:
-                self.log.exception(f"Unexpected error applying manifest {idx}")
-                raise
-            self.log.info(f"Topology file apply {idx}/{total} done")
 
     async def get_options_form(self):
         """
