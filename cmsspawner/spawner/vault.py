@@ -1,10 +1,10 @@
 import json
 import os
-import sys
 
+from cmsspawner.cms_client.rpc import CMSRpcClient
+from cmsspawner.git_client.client import GitClient
 from .route import FirstStepHandler, SecondStepHandler
 from .spawner import CMSSpawner
-from cmsspawner.cms_client.rpc import CMSRpcClient
 
 
 def extract_display_name(authenticator, handler, authentication):
@@ -38,8 +38,8 @@ def vault_init(c):
     CMSRpcClient.login = secrets["CMS_LOGIN"]
     CMSRpcClient.password = secrets["CMS_PASSWORD"]
 
-    SecondStepHandler.git_url = secrets["CMS_TASK_URL"]
-    SecondStepHandler.git_branch = secrets["CMS_TASK_BRANCH"]
+    GitClient.git_url = secrets["CMS_TASK_URL"]
+    GitClient.git_branch = secrets["CMS_TASK_BRANCH"]
 
     # Изменяем конфигурацию
     c.JupyterHub.extra_handlers = [

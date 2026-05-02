@@ -56,7 +56,12 @@ hub:
         - "admin"
         - "instructor"
     KubeSpawner:
-      enable_user_namespaces: false
+      enable_user_namespaces: true
+      user_namespace_template: "jup-{escaped_username}-{servername}"
+      user_namespace_labels:
+        pod-security.kubernetes.io/enforce: "privileged"
+        pod-security.kubernetes.io/warn: "privileged"
+        pod-security.kubernetes.io/audit: "privileged"
       delete_pvc: true
       storage_pvc_ensure: true
       k8s_api_verify_ssl: false
@@ -458,7 +463,7 @@ singleuser:
   lifecycleHooks:
     postStart:
       exec:
-        command: ["/usr/local/bin/notebook.entrypoint.sh"]
+        command: [ "/usr/local/bin/notebook.entrypoint.sh" ]
   initContainers: [ ]
   extraContainers: [ ]
   allowPrivilegeEscalation: false

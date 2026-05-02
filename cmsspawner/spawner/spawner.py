@@ -1,9 +1,14 @@
+import asyncio
 import logging
 
+import yaml
+from kubernetes_asyncio import utils
+from kubernetes_asyncio.client import ApiException
 from kubespawner import KubeSpawner
 from tornado import web
-from cmsspawner.cms_client.rpc import CMSRpcClient
 
+from cmsspawner.cms_client.rpc import CMSRpcClient
+from cmsspawner.git_client.client import GitClient
 from .models import UserInfo
 from .utils import setup_logger
 
@@ -12,6 +17,8 @@ class CMSSpawner(KubeSpawner):
     """
     Класс хранит базовую логику для списка профилей и создание информации в кубернетес
     """
+    git_url: str = ""
+    git_branch: str = "master"
 
     extra_pod_config = {
         "restartPolicy": "Always",
@@ -43,6 +50,67 @@ class CMSSpawner(KubeSpawner):
             self.env['ATTEMPT_ID'] = attempt_id
             self.log.info(f"Updated extra_labels with attempt_id: {attempt_id}")
         return await super()._start()
+
+    async def _ensure_namespace(self):
+        await super()._ensure_namespace()
+        if not self.user_options.get('profile'):
+            self.log.info(f"User not used profile with attempts")
+            return None
+        attempt_id = str(self.user_options['profile'])
+        rpc_client = CMSRpcClient()
+        attempts = await rpc_client.list_attempts(
+            attempt_ids=[attempt_id],
+            limit=1,
+            offset=0,
+        )
+        if not attempts:
+            self.log.info(f"User not found running attempt with CMS")
+            return None
+        attempt = attempts[0]
+        labs_path = attempt.get('labs_path')
+        if not labs_path:
+            self.log.info(f"User spawned labs without task")
+            return None
+        git_client = GitClient()
+        topology = await git_client.get_topology_file(labs_path=labs_path)
+        self.log.info(f"Topology file found. Start deploy")
+        topology = topology.replace("$NAME", self.namespace)
+        await self._apply_manifests(yaml_content=topology)
+        return None
+
+    async def _apply_manifests(self, yaml_content: str):
+        """Применяет Kubernetes манифесты из YAML (аналог kubectl apply -f)
+
+        Args:
+            yaml_content: YAML строка с манифестами
+        """
+        manifests = list(yaml.safe_load_all(yaml_content))
+
+        # Применяем последовательно в порядке следования в файле
+        for idx, manifest in enumerate(manifests, start=1):
+            if not manifest:
+                continue
+            try:
+                if 'metadata' not in manifest:
+                    manifest['metadata'] = {}
+                if 'namespace' not in manifest['metadata']:
+                    manifest['metadata']['namespace'] = self.namespace
+                self.log.info(f"Topology file applying... {idx}/{len(manifests)}")
+                await asyncio.wait_for(
+                    utils.create_from_dict(
+                        self.api,
+                        data=manifest,
+                        verbose=False,
+                        namespace=self.namespace,
+                    ),
+                    timeout=self.k8s_api_request_timeout,
+                )
+            except ApiException as e:
+                if e.status != 409:
+                    # It's fine if it already exists
+                    self.log.exception(f"Failed to create topology yaml file {self.namespace}")
+                    raise
+            self.log.info(f"Topology file apply {idx}/{len(manifests)}")
 
     async def get_options_form(self):
         """

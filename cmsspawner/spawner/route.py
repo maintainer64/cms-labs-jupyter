@@ -6,6 +6,7 @@ from urllib.parse import urlencode
 from jupyterhub.handlers import BaseHandler
 from tornado import web
 
+from cmsspawner.git_client.client import GitClient
 from cmsspawner.spawner.models import UserInfo
 from cmsspawner.cms_client.rpc import CMSRpcClient
 from cmsspawner.spawner.utils import render_template
@@ -14,7 +15,6 @@ from cmsspawner.spawner.utils import render_template
 @dataclass
 class SSOTokenPublicExtraParams:
     attempt_id: str = ""
-    labs_path: str = ""
 
 
 class FirstStepHandler(BaseHandler):
@@ -48,8 +48,6 @@ class SecondStepHandler(BaseHandler):
     После успешного старта пользователь сможет перейти на git-pull URL.
     """
 
-    git_url: str = ""
-    git_branch: str = "master"
     route = r"/pnet-lab-addon/api/v1/sso/connect"
 
     @web.authenticated
@@ -104,6 +102,7 @@ class SecondStepHandler(BaseHandler):
         attempt = attempts[0]
         attempt_id = attempt["attempt_id"]
         attempt_number = str(attempt["id"])
+        labs_path = attempt.get("labs_path")
 
         if attempt_id != extra.attempt_id:
             self.set_status(400)
@@ -113,7 +112,7 @@ class SecondStepHandler(BaseHandler):
         finish_redirect_url = self.get_redirect_complete_params(
             server_name=attempt_number,
             username=user.name,
-            lab_url=extra.labs_path,
+            labs_path=labs_path or "",
         )
         return self.finish({
             "attempt_number": attempt_number,
@@ -159,27 +158,26 @@ class SecondStepHandler(BaseHandler):
             extra_params = json.loads(decoded_bytes.decode("utf-8"))
 
             attempt_id = extra_params.get("attempt_id", "") or ""
-            labs_path = extra_params.get("labs_path", "") or ""
 
             return SSOTokenPublicExtraParams(
                 attempt_id=attempt_id,
-                labs_path=labs_path,
             )
         except Exception as e:
             self.log.error(f"Failed to decode extra param: {e}")
             return None
 
-    def get_redirect_complete_params(self, server_name: str, username: str, lab_url: str) -> str:
+    @staticmethod
+    def get_redirect_complete_params(server_name: str, username: str, labs_path: str) -> str:
         """
         Создаёт ссылку для перехода на созданный ресурс
         """
-        path = lab_url.strip("/")
+        path = labs_path.strip("/")
         base_path = path.split("/")[0]
 
         params = {
-            "repo": f"{self.git_url}/{base_path}",
+            "repo": f"{GitClient.git_url}/{base_path}",
             "urlpath": f"lab/tree/{path}",
-            "branch": self.git_branch,
+            "branch": GitClient.git_branch,
         }
         query_string = urlencode(params)
         return f"/user/{username}/{server_name}/git-pull?{query_string}"
