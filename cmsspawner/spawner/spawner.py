@@ -2,7 +2,7 @@ import asyncio
 import logging
 
 import yaml
-from kubernetes_asyncio import utils
+from kubernetes_asyncio import utils, client
 from kubernetes_asyncio.client import ApiException
 from kubespawner import KubeSpawner
 from tornado import web
@@ -80,37 +80,61 @@ class CMSSpawner(KubeSpawner):
 
     async def _apply_manifests(self, yaml_content: str):
         """Применяет Kubernetes манифесты из YAML (аналог kubectl apply -f)
-
-        Args:
-            yaml_content: YAML строка с манифестами
+        Поддерживает как стандартные ресурсы, так и CRD (Containerlab).
         """
-        manifests = list(yaml.safe_load_all(yaml_content))
+        # Загружаем все манифесты и убираем пустые блоки (None)
+        manifests = [m for m in yaml.safe_load_all(yaml_content) if m]
+        total = len(manifests)
+        kind = ""
 
-        # Применяем последовательно в порядке следования в файле
         for idx, manifest in enumerate(manifests, start=1):
-            if not manifest:
-                continue
             try:
+                # 1. Подготовка метаданных
+                kind = manifest.get('kind', "")
+                api_version = manifest.get('apiVersion', '')
+
                 if 'metadata' not in manifest:
                     manifest['metadata'] = {}
                 if 'namespace' not in manifest['metadata']:
                     manifest['metadata']['namespace'] = self.namespace
-                self.log.info(f"Topology file applying... {idx}/{len(manifests)}")
+
+                self.log.info(f"Topology file applying... {idx}/{total} [{kind}]")
+
+                # 2. Определяем параметры для API
+                # Разделяем apiVersion на group и version (например, 'apps/v1' или 'v1')
+                if '/' in api_version:
+                    group, version = api_version.split('/')
+                else:
+                    group, version = "", api_version
+
+                # Для CustomObjectsApi нужно plural имя (обычно это kind во множественном числе)
+                # Для Containerlab -> containerlabs, Deployment -> deployments
+                plural = kind.lower() + "s"
+
+                # 3. Выполняем запрос через универсальный CustomObjectsApi
+                custom_api = client.CustomObjectsApi(self.api)
+
                 await asyncio.wait_for(
-                    utils.create_from_dict(
-                        self.api,
-                        data=manifest,
-                        verbose=False,
+                    custom_api.create_namespaced_custom_object(
+                        group=group,
+                        version=version,
                         namespace=self.namespace,
+                        plural=plural,
+                        body=manifest
                     ),
                     timeout=self.k8s_api_request_timeout,
                 )
+
             except ApiException as e:
-                if e.status != 409:
-                    # It's fine if it already exists
-                    self.log.exception(f"Failed to create topology yaml file {self.namespace}")
+                if e.status == 409:
+                    self.log.info(f"Resource {kind} already exists, skipping...")
+                else:
+                    self.log.exception(f"Failed to create topology resource {kind} in {self.namespace}")
                     raise
-            self.log.info(f"Topology file apply {idx}/{len(manifests)}")
+            except Exception:
+                self.log.exception(f"Unexpected error applying manifest {idx}")
+                raise
+            self.log.info(f"Topology file apply {idx}/{total} done")
 
     async def get_options_form(self):
         """
