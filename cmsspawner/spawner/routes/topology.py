@@ -1,19 +1,26 @@
-import json
-from typing import Dict, Any, Tuple
+from typing import Dict, Any
 
 import yaml
 from jupyterhub.handlers import BaseHandler
-from kubernetes_asyncio.config import load_config
-from kubespawner.clients import shared_client
+from kubespawner.clients import shared_client, load_config
 from tornado import web
 
 from cmsspawner.spawner.models import UserInfo
 from cmsspawner.spawner.spawner import CMSSpawner
-from cmsspawner.spawner.utils import render_template
 
 
 class TopologyHandler(BaseHandler):
     route = r"/containerlab/topology"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        load_config(
+            host=CMSSpawner.k8s_api_host,
+            ssl_ca_cert=CMSSpawner.k8s_api_ssl_ca_cert,
+            verify_ssl=CMSSpawner.k8s_api_verify_ssl,
+        )
+        self.custom_api = shared_client("CustomObjectsApi")
+        self.core_api = shared_client("CoreV1Api")
 
     async def get_user_profile(self) -> UserInfo | None:
         """
@@ -35,31 +42,6 @@ class TopologyHandler(BaseHandler):
             email=auth_state["oauth_user"]["email"],
             name=auth_state["oauth_user"]["name"],
         )
-
-    def _parse_request_body(self) -> Tuple[str, str] | None:
-        """
-        Парсит тело запроса и извлекает name и namespace
-        Возвращает (topology_name, namespace) или None в случае ошибки
-        """
-        try:
-            body = json.loads(self.request.body)
-            topology_name = body.get("name")
-            namespace = body.get("namespace")
-
-            if not topology_name or not namespace:
-                self.set_status(400)
-                self.finish({
-                    "error": "Параметры 'name' и 'namespace' обязательны."
-                })
-                return None
-
-            return topology_name, namespace
-        except json.JSONDecodeError:
-            self.set_status(400)
-            self.finish({
-                "error": "Неверный формат JSON."
-            })
-            return None
 
     async def _get_topology(self, custom_api: Any, topology_name: str) -> Dict[str, Any] | None:
         """
@@ -169,17 +151,8 @@ class TopologyHandler(BaseHandler):
 
         self.log.info(f"User {profile.email} get topology {topology_name}")
 
-        # Инициализируем Kubernetes клиенты
-        await load_config(
-            host=CMSSpawner.k8s_api_host,
-            ssl_ca_cert=CMSSpawner.k8s_api_ssl_ca_cert,
-            verify_ssl=CMSSpawner.k8s_api_verify_ssl,
-        )
-        custom_api = shared_client("CustomObjectsApi")
-        core_api = shared_client("CoreV1Api")
-
         # Получаем топологию
-        topology = await self._get_topology(custom_api=custom_api, topology_name=topology_name)
+        topology = await self._get_topology(custom_api=self.custom_api, topology_name=topology_name)
         if not topology:
             self.set_status(404)
             return self.finish({
@@ -190,8 +163,8 @@ class TopologyHandler(BaseHandler):
             nodes = self._parse_topology_nodes(topology)
 
             # Получаем сервисы и HTTPRoutes
-            services = await self._get_services(core_api=core_api, namespace=topology_name)
-            http_routes = await self._get_http_routes(custom_api=custom_api, namespace=topology_name)
+            services = await self._get_services(core_api=self.core_api, namespace=topology_name)
+            http_routes = await self._get_http_routes(custom_api=self.custom_api, namespace=topology_name)
 
             # Формируем результат
             result_nodes = [
@@ -215,10 +188,6 @@ class TopologyHandler(BaseHandler):
                 "error": f"Ошибка обработки топологии: {str(e)}"
             })
 
-    @web.authenticated
-    async def get(self, *args, **kwargs):
-        html = await render_template(
-            template_name="auto_redirect.html.jinja2",
-            xsrf_token=self.xsrf_token.decode("utf-8"),
-        )
-        return self.finish(html)
+    def check_xsrf_cookie(self):
+        # Отключил хендлер
+        pass
