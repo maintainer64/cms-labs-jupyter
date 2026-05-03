@@ -3,8 +3,10 @@ import os
 
 from cmsspawner.cms_client.rpc import CMSRpcClient
 from cmsspawner.git_client.client import GitClient
+from cmsspawner.spawner.routes.first_step import FirstStepHandler
+from cmsspawner.spawner.routes.second_step import SecondStepHandler
+from cmsspawner.spawner.routes.topology import TopologyHandler
 from .kubectl_topology import KubectlTopology
-from .route import FirstStepHandler, SecondStepHandler
 from .spawner import CMSSpawner
 
 
@@ -47,6 +49,7 @@ def vault_init(c):
     c.JupyterHub.extra_handlers = [
         (FirstStepHandler.route, FirstStepHandler),
         (SecondStepHandler.route, SecondStepHandler),
+        (TopologyHandler.route, TopologyHandler),
     ]
     # Разрешает использовать 5 серверов
     c.JupyterHub.allow_named_servers = True
