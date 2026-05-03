@@ -73,6 +73,7 @@ class CMSSpawner(KubeSpawner):
             return None
         git_client = GitClient()
         topology = await git_client.get_topology_file(labs_path=labs_path)
+        await git_client.close()
         if not topology:
             self.log.info(f"User spawned labs without topology file")
             return None
