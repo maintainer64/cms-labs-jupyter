@@ -171,12 +171,11 @@ class TopologyHandler(BaseHandler):
             # Формируем результат
             result_nodes = [
                 {
-                    {
-                        "name": node_name,
-                        "external_ip": self._find_external_ip(node_name, services),
-                        "http_route": self._find_http_route_hostname(node_name, http_routes)
-                    }
-                } for node_name in nodes.keys()
+                    "name": node_name,
+                    "external_ip": self._find_external_ip(node_name, services),
+                    "http_route": self._find_http_route_hostname(node_name, http_routes)
+                }
+                for node_name in nodes.keys()
             ]
 
             return self.finish({
