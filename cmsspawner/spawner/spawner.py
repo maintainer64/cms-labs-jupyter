@@ -9,6 +9,7 @@ from tornado import web
 
 from cmsspawner.cms_client.rpc import CMSRpcClient
 from cmsspawner.git_client.client import GitClient
+from .kubectl_topology import KubectlTopology
 from .models import UserInfo
 from .utils import setup_logger
 
@@ -79,62 +80,13 @@ class CMSSpawner(KubeSpawner):
             return None
         self.log.info(f"Topology file found. Start deploy")
         topology = topology.replace("$NAME", self.namespace)
-        await self._apply_manifests(yaml_content=topology)
+        kubectl_topology = KubectlTopology(
+            api_client=self.api.api_client,
+            namespace=self.namespace,
+            k8s_api_request_timeout=self.k8s_api_request_timeout,
+        )
+        await kubectl_topology.apply(yaml_content=topology)
         return None
-
-    async def _apply_manifests(self, yaml_content: str):
-        """Применяет Kubernetes манифесты из YAML (аналог kubectl apply -f)"""
-        manifests = list(yaml.safe_load_all(yaml_content))
-        custom_api = CustomObjectsApi(api_client=self.api.api_client)
-
-        for idx, manifest in enumerate(manifests, start=1):
-            if not manifest:
-                continue
-            kind, name = "", ""
-            try:
-                if 'metadata' not in manifest:
-                    manifest['metadata'] = {}
-                if 'namespace' not in manifest['metadata']:
-                    manifest['metadata']['namespace'] = self.namespace
-
-                # Для вашего YAML:
-                # apiVersion: clabernetes.containerlab.dev/v1alpha1
-                # kind: Topology
-                api_version = manifest.get('apiVersion', '')
-                kind = manifest.get('kind', '')
-                name = manifest.get('metadata', {}).get('name', 'Unknown')
-                namespace = manifest['metadata']['namespace']
-
-                # Парсим group/version
-                group, version = api_version.split('/', 1)  # clabernetes.containerlab.dev / v1alpha1
-
-                # plural для Topology = topologies
-                if kind.endswith('y'):
-                    plural = kind[:-1].lower() + 'ies'  # Topology -> topologies
-                else:
-                    plural = kind.lower() + 's'
-
-                self.log.info(f"Applying {idx}/{len(manifests)}: {kind}/{name} in namespace {namespace}")
-
-                await asyncio.wait_for(
-                    custom_api.create_namespaced_custom_object(
-                        group=group,
-                        version=version,
-                        namespace=namespace,
-                        plural=plural,
-                        body=manifest,
-                    ),
-                    timeout=self.k8s_api_request_timeout,
-                )
-
-                self.log.info(f"Successfully applied {idx}/{len(manifests)}: {kind}/{name}")
-
-            except ApiException as e:
-                if e.status == 409:
-                    self.log.info(f"Resource {kind}/{name} already exists in {namespace}, skipping")
-                else:
-                    self.log.exception(f"Failed to create {kind}/{name} in {namespace}")
-                    raise
 
     async def get_options_form(self):
         """

@@ -1,0 +1,35 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ node_name }}-redirect
+  namespace: {{ namespace }}
+spec:
+  parentRefs:
+    - name: cilium-gateway
+      namespace: cilium
+      sectionName: http
+  hostnames:
+    - "{{ node_name }}-{{ namespace }}{{ hostname_suffix }}"
+  rules:
+    - filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            statusCode: 301
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ node_name }}
+  namespace: {{ namespace }}
+spec:
+  parentRefs:
+    - name: cilium-gateway
+      namespace: cilium
+      sectionName: https
+  hostnames:
+    - "{{ node_name }}-{{ namespace }}{{ hostname_suffix }}"
+  rules:
+    - backendRefs:
+        - name: {{ node_name }}-vx
+          port: 7681
