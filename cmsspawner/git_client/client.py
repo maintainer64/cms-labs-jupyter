@@ -41,8 +41,9 @@ class GitClient:
             possible_paths.append(url)
         session = await self._get_session()
         for url in possible_paths:
-            async with session.get(url) as resp:
+            async with session.get(url, raise_for_status=False) as resp:
                 if resp.status != 200:
                     continue
+                print(f"founded url: {url}")
                 return await resp.text()
         return None

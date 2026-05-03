@@ -2,7 +2,6 @@ import asyncio
 import logging
 
 import yaml
-from kubernetes_asyncio import utils, client
 from kubernetes_asyncio.client import ApiException
 from kubernetes_asyncio.client.api.custom_objects_api import CustomObjectsApi
 from kubespawner import KubeSpawner
