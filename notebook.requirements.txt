@@ -14,6 +14,7 @@ ncclient  # NETCONF протокол
 # Интерфейс
 jupyterlab-language-pack-ru-RU  # Языковой пакет
 ipywidgets  # Виджеты для блокнота
+jupyterlab-theme-toggler  # Переключатель темы
 
 # Разработка
 pipdeptree  # Покажет дерево зависимостей
@@ -21,6 +22,7 @@ jupyter-collaboration  # Покажет человек которые сидят
 jupyterlab-execute-time  # Сколько времени работала ячейка
 jupyter-resource-usage  # Текущее потребление блокнота
 nbgitpuller  # Скачивает git репозитории
+jupyterlab-iframe  # Встаривает IFRAME
 
 # Jupyterhub
 jupyterhub==5.4.4

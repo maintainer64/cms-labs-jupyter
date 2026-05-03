@@ -36,7 +36,7 @@ async def main():
     rpc_client = CMSRpcClient()
     jupyterhub_client = JupyterHubClient()
     # Получаем все серверы, преобразуем в словарь по server_name (номер попытки)
-    all_servers = await jupyterhub_client.list_servers(include_inactive=True)
+    all_servers = await jupyterhub_client.list_servers()
     servers_by_attempt = {
         str(server["server_name"]): server
         for server in all_servers

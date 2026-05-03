@@ -268,31 +268,18 @@ class JupyterHubClient:
 
     async def list_users(
             self,
-            state: str | None = None,
-            limit: int = 0,
     ) -> JsonList:
         """
         Возвращает список пользователей.
-
-        :param state:
-            Например:
-            - "ready" — пользователи с работающими серверами;
-            - "inactive" — пользователи без активных серверов.
-
-        :param limit:
-            Размер страницы.
-            Если 0 — используется стандартное значение JupyterHub.
         """
 
-        params: dict[str, Any] = {}
-
-        if state:
-            params["state"] = state
-
-        if limit > 0:
-            params["limit"] = limit
-
-        return await self._get_paginated("/users", params=params)
+        return await self._get_paginated(
+            "/users",
+            params={
+                "include_stopped_servers": 1,
+                "limit": 50,
+            }
+        )
 
     async def get_server_info(
             self,
@@ -397,7 +384,6 @@ class JupyterHubClient:
 
     async def list_servers(
             self,
-            include_inactive: bool = False,
     ) -> JsonList:
         """
         Возвращает список серверов пользователей.
@@ -414,14 +400,8 @@ class JupyterHubClient:
             "ready": bool,
             "state": dict
         }
-
-        :param include_inactive:
-            Если False — возвращаются только ready/pending серверы.
-            Если True — возвращаются также неактивные серверы, если они есть в API.
         """
-
-        state_filter = None if include_inactive else "ready"
-        users = await self.list_users(state=state_filter)
+        users = await self.list_users()
 
         servers: JsonList = []
 
@@ -447,9 +427,6 @@ class JupyterHubClient:
             for server_name, server_info in servers_dict.items():
                 ready = bool(server_info.get("ready", bool(server_info.get("url"))))
                 pending = server_info.get("pending")
-
-                if not include_inactive and not ready and not pending:
-                    continue
 
                 last_activity = (
                         server_info.get("last_activity")
