@@ -2,6 +2,7 @@ from typing import Dict, Any
 
 import yaml
 from jupyterhub.handlers import BaseHandler
+from kubernetes_asyncio.client import CustomObjectsApi
 from kubespawner.clients import shared_client, load_config
 from tornado import web
 
@@ -19,7 +20,6 @@ class TopologyHandler(BaseHandler):
             ssl_ca_cert=CMSSpawner.k8s_api_ssl_ca_cert,
             verify_ssl=CMSSpawner.k8s_api_verify_ssl,
         )
-        self.custom_api = shared_client("CustomObjectsApi")
         self.core_api = shared_client("CoreV1Api")
 
     async def get_user_profile(self) -> UserInfo | None:
@@ -151,8 +151,10 @@ class TopologyHandler(BaseHandler):
 
         self.log.info(f"User {profile.email} get topology {topology_name}")
 
+        custom_api = CustomObjectsApi(api_client=self.core_api.api_client)
+
         # Получаем топологию
-        topology = await self._get_topology(custom_api=self.custom_api, topology_name=topology_name)
+        topology = await self._get_topology(custom_api=custom_api, topology_name=topology_name)
         if not topology:
             self.set_status(404)
             return self.finish({
@@ -164,7 +166,7 @@ class TopologyHandler(BaseHandler):
 
             # Получаем сервисы и HTTPRoutes
             services = await self._get_services(core_api=self.core_api, namespace=topology_name)
-            http_routes = await self._get_http_routes(custom_api=self.custom_api, namespace=topology_name)
+            http_routes = await self._get_http_routes(custom_api=custom_api, namespace=topology_name)
 
             # Формируем результат
             result_nodes = [
