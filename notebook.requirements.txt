@@ -14,7 +14,6 @@ ncclient  # NETCONF протокол
 # Интерфейс
 jupyterlab-language-pack-ru-RU  # Языковой пакет
 ipywidgets  # Виджеты для блокнота
-jupyterlab-theme-toggler  # Переключатель темы
 
 # Разработка
 pipdeptree  # Покажет дерево зависимостей
