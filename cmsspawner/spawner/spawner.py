@@ -74,6 +74,9 @@ class CMSSpawner(KubeSpawner):
             return None
         git_client = GitClient()
         topology = await git_client.get_topology_file(labs_path=labs_path)
+        if not topology:
+            self.log.info(f"User spawned labs without topology file")
+            return None
         self.log.info(f"Topology file found. Start deploy")
         topology = topology.replace("$NAME", self.namespace)
         await self._apply_manifests(yaml_content=topology)
