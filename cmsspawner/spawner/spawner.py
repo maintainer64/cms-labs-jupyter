@@ -1,11 +1,11 @@
+import asyncio
 import logging
 
+from kubernetes_asyncio.client import ApiException
 from kubespawner import KubeSpawner
 from tornado import web
 
 from cmsspawner.cms_client.rpc import CMSRpcClient
-from cmsspawner.git_client.client import GitClient
-from .kubectl_topology import KubectlTopology
 from .models import UserInfo
 from .utils import setup_logger
 
@@ -80,6 +80,30 @@ class CMSSpawner(KubeSpawner):
             email=auth_state["oauth_user"]["email"],
             name=auth_state["oauth_user"]["name"],
         )
+
+    async def delete_forever(self) -> None:
+        await super().delete_forever()
+        try:
+            await asyncio.wait_for(
+                self.api.delete_namespace(self.namespace),
+                self.k8s_api_request_timeout,
+            )
+        except ApiException as e:
+            if e.status == 404:
+                # уже удалён — ок
+                return
+            if e.status == 409:
+                # уже в процессе удаления — тоже ок
+                self.log.info("Namespace %s is already terminating", self.namespace)
+                return
+            self.log.exception("Failed to delete namespace %s", self.namespace)
+            raise
+        except asyncio.TimeoutError:
+            self.log.error(
+                "Timed out (%.1fs) deleting namespace %s",
+                self.k8s_api_request_timeout, self.namespace,
+            )
+            raise
 
     async def profile_list(self, current_spawner: KubeSpawner) -> list | None:
         """
