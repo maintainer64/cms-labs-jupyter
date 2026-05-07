@@ -316,7 +316,7 @@ class JupyterHubClient:
         path = self._server_path(user, server_name)
 
         try:
-            await self._request("DELETE", path)
+            await self._request("DELETE", path, json={"remove": True})
         except JupyterHubAPIError as exc:
             if exc.status == 404:
                 logger.debug(
