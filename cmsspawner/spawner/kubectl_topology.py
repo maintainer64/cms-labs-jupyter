@@ -5,11 +5,10 @@ import yaml
 from kubernetes_asyncio.client import ApiException, ApiClient, CoreV1Api
 from kubernetes_asyncio.client.api.custom_objects_api import CustomObjectsApi
 
-from .utils import setup_logger, render_template
+from .utils import setup_logger
 
 
 class KubectlTopology:
-    hostname_suffix = ''
 
     def __init__(
             self,

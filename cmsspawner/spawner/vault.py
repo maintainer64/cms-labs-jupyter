@@ -43,7 +43,6 @@ def vault_init(c):
 
     GitClient.git_url = secrets["CMS_TASK_URL"]
     GitClient.git_branch = secrets["CMS_TASK_BRANCH"]
-    KubectlTopology.hostname_suffix = secrets["CLABERNETES_HOSTNAME_SUFFIX"]
 
     # Изменяем конфигурацию
     c.JupyterHub.extra_handlers = [
