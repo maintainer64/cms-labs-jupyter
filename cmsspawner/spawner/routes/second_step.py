@@ -70,6 +70,7 @@ class SecondStepHandler(BaseHandler):
             limit=5000,
             offset=0,
         )
+        await rpc_client.close()
 
         if not attempts:
             self.set_status(400)

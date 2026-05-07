@@ -14,8 +14,6 @@ class CMSSpawner(KubeSpawner):
     """
     Класс хранит базовую логику для списка профилей и создание информации в кубернетес
     """
-    git_url: str = ""
-    git_branch: str = "master"
 
     extra_pod_config = {
         "restartPolicy": "Always",
@@ -47,42 +45,6 @@ class CMSSpawner(KubeSpawner):
             self.env['ATTEMPT_ID'] = attempt_id
             self.log.info(f"Updated extra_labels with attempt_id: {attempt_id}")
         return await super()._start()
-
-    async def _ensure_namespace(self):
-        await super()._ensure_namespace()
-        if not self.user_options.get('profile'):
-            self.log.info(f"User not used profile with attempts")
-            return None
-        attempt_id = str(self.user_options['profile'])
-        rpc_client = CMSRpcClient()
-        attempts = await rpc_client.list_attempts(
-            attempt_ids=[attempt_id],
-            limit=1,
-            offset=0,
-        )
-        if not attempts:
-            self.log.info(f"User not found running attempt with CMS")
-            return None
-        attempt = attempts[0]
-        labs_path = attempt.get('labs_path')
-        if not labs_path:
-            self.log.info(f"User spawned labs without task")
-            return None
-        git_client = GitClient()
-        topology = await git_client.get_topology_file(labs_path=labs_path)
-        await git_client.close()
-        if not topology:
-            self.log.info(f"User spawned labs without topology file")
-            return None
-        self.log.info(f"Topology file found. Start deploy")
-        topology = topology.replace("$NAME", self.namespace)
-        kubectl_topology = KubectlTopology(
-            api_client=self.api.api_client,
-            namespace=self.namespace,
-            k8s_api_request_timeout=self.k8s_api_request_timeout,
-        )
-        await kubectl_topology.apply(yaml_content=topology)
-        return None
 
     async def get_options_form(self):
         """
@@ -136,6 +98,7 @@ class CMSSpawner(KubeSpawner):
             limit=5000,
             offset=0,
         )
+        await rpc_client.close()
         self.log.info(f"Profile list count {len(attempts)} by user {profile.username}")
         profiles = []
         for attempt in attempts:

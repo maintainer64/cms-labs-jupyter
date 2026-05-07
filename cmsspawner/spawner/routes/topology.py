@@ -1,17 +1,16 @@
-from typing import Dict, Any
-
-import yaml
 from jupyterhub.handlers import BaseHandler
-from kubernetes_asyncio.client import CustomObjectsApi
 from kubespawner.clients import shared_client, load_config
 from tornado import web
 
+from cmsspawner.cms_client.rpc import CMSRpcClient
+from cmsspawner.git_client.client import GitClient
+from cmsspawner.spawner.kubectl_topology import KubectlTopology
 from cmsspawner.spawner.models import UserInfo
 from cmsspawner.spawner.spawner import CMSSpawner
 
 
 class TopologyHandler(BaseHandler):
-    route = r"/containerlab/topology"
+    route = r"/containerlab/topology/create"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -43,96 +42,6 @@ class TopologyHandler(BaseHandler):
             name=auth_state["oauth_user"]["name"],
         )
 
-    async def _get_topology(self, custom_api: Any, topology_name: str) -> Dict[str, Any] | None:
-        """
-        Получает топологию из Kubernetes
-        """
-        try:
-            topology = await custom_api.get_namespaced_custom_object(
-                group="clabernetes.containerlab.dev",
-                version="v1alpha1",
-                namespace=topology_name,
-                plural="topologies",
-                name=topology_name
-            )
-            return topology
-        except Exception as e:
-            self.log.error(f"Error getting topology: {str(e)}")
-            return None
-
-    @staticmethod
-    def _parse_topology_nodes(topology: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Парсит YAML определения топологии и извлекает ноды
-        """
-        topology_def = yaml.safe_load(topology["spec"]["definition"]["containerlab"])
-        return topology_def.get("topology", {}).get("nodes", {})
-
-    @staticmethod
-    async def _get_services(core_api: Any, namespace: str):
-        """
-        Получает все сервисы в namespace
-        """
-        return await core_api.list_namespaced_service(namespace=namespace)
-
-    @staticmethod
-    async def _get_http_routes(custom_api: Any, namespace: str) -> Dict[str, Any]:
-        """
-        Получает все HTTPRoutes в namespace
-        """
-        try:
-            return await custom_api.list_namespaced_custom_object(
-                group="gateway.networking.k8s.io",
-                version="v1",
-                namespace=namespace,
-                plural="httproutes"
-            )
-        except:
-            try:
-                return await custom_api.list_namespaced_custom_object(
-                    group="gateway.networking.k8s.io",
-                    version="v1beta1",
-                    namespace=namespace,
-                    plural="httproutes"
-                )
-            except:
-                return {"items": []}
-
-    @staticmethod
-    def _find_external_ip(node_name: str, services) -> str | None:
-        """
-        Находит EXTERNAL-IP для указанной ноды в списке сервисов
-        """
-        for svc in services.items:
-            if svc.metadata.name == node_name and svc.spec.type == "LoadBalancer":
-                if svc.status.load_balancer.ingress:
-                    return svc.status.load_balancer.ingress[0].ip
-        return None
-
-    @staticmethod
-    def _find_http_route_hostname(node_name: str, http_routes: Dict[str, Any]) -> str | None:
-        """
-        Находит hostname из HTTPRoute для указанной ноды
-        """
-        for route in http_routes.get("items", []):
-            rules = route.get("spec", {}).get("rules", [])
-            route_matches = False
-
-            for rule in rules:
-                backend_refs = rule.get("backendRefs", [])
-                for backend in backend_refs:
-                    if backend.get("name") == node_name:
-                        route_matches = True
-                        break
-                if route_matches:
-                    break
-
-            if route_matches:
-                hostnames = route.get("spec", {}).get("hostnames", [])
-                if hostnames:
-                    return hostnames[0]
-        return None
-
     @web.authenticated
     async def post(self, *args, **kwargs):
         # Получаем профиль пользователя
@@ -140,54 +49,81 @@ class TopologyHandler(BaseHandler):
         if not profile:
             self.set_status(400)
             return self.finish({
-                "error": "Отсутствует профиль пользователя."
+                "message": "Отсутствует профиль пользователя"
             })
-        topology_name = self.get_argument("topology_name", "")
-        if not topology_name:
+        attempt_id = self.get_argument("attempt_id", "")
+        if not attempt_id:
             self.set_status(500)
             return self.finish({
-                "error": "Отсутствует параметр топологии"
+                "message": "Отсутствует параметр запроса attempt_id"
             })
-
-        self.log.info(f"User {profile.email} get topology {topology_name}")
-
-        custom_api = CustomObjectsApi(api_client=self.core_api.api_client)
-
-        # Получаем топологию
-        topology = await self._get_topology(custom_api=custom_api, topology_name=topology_name)
+        rpc_client = CMSRpcClient()
+        attempts = await rpc_client.list_attempts(
+            attempt_ids=[attempt_id],
+            user_ids=[profile.user_id],
+            limit=1,
+            offset=0,
+        )
+        await rpc_client.close()
+        if not attempts:
+            self.log.info(f"User {profile.email} not used profile with attempts {attempt_id}")
+            self.set_status(500)
+            return self.finish({
+                "message": "Отсутствует attempt_id для данного пользователя"
+            })
+        attempt = attempts[0]
+        labs_path = attempt.get('labs_path')
+        if not labs_path:
+            message = f"User {profile.email} spawned labs without topology {attempt_id}"
+            self.log.info(message)
+            self.set_status(200)
+            return self.finish({
+                "labs_path": labs_path,
+                "message": message
+            })
+        git_client = GitClient()
+        topology = await git_client.get_topology_file(labs_path=labs_path)
+        await git_client.close()
         if not topology:
-            self.set_status(404)
+            message = (
+                f"User {profile.email} spawned labs without topology {attempt_id}. "
+                f"Topology file {labs_path} is not found"
+            )
+            self.log.info(message)
+            self.set_status(200)
             return self.finish({
-                "error": "Топология не найдена"
+                "labs_path": labs_path,
+                "message": message,
             })
-        try:
-            # Получаем ноды из топологии
-            nodes = self._parse_topology_nodes(topology)
-
-            # Получаем сервисы и HTTPRoutes
-            services = await self._get_services(core_api=self.core_api, namespace=topology_name)
-            http_routes = await self._get_http_routes(custom_api=custom_api, namespace=topology_name)
-
-            # Формируем результат
-            result_nodes = [
-                {
-                    "name": node_name,
-                    "external_ip": self._find_external_ip(node_name, services),
-                    "http_route": self._find_http_route_hostname(node_name, http_routes)
-                }
-                for node_name in nodes.keys()
-            ]
-
-            return self.finish({
-                "nodes": result_nodes
-            })
-
-        except Exception as e:
-            self.log.error(f"Error processing topology: {str(e)}")
+        self.log.info(f"Topology file {labs_path} found with {attempt_id} and {profile.email}. Start deploy")
+        kubectl_topology = KubectlTopology(
+            api_client=self.core_api.api_client,
+            k8s_api_request_timeout=120,
+        )
+        namespace = await kubectl_topology.search_namespace_by_attempt_id(attempt_id=attempt_id)
+        if not namespace:
+            message = f"User {profile.email} namespaces not found by {attempt_id}"
+            self.log.info(message)
             self.set_status(500)
             return self.finish({
-                "error": f"Ошибка обработки топологии: {str(e)}"
+                "message": message,
             })
+        topology = topology.replace("$NAME", namespace)
+        try:
+            await kubectl_topology.apply(namespace=namespace, yaml_content=topology)
+        except Exception as e:
+            self.log.error(f"Error applying topology with user {profile.email} and {attempt_id=}: {str(e)}")
+            self.set_status(500)
+            return self.finish({
+                "message": "Error applying topology"
+            })
+        self.set_status(200)
+        message = f"Topology success applying with {attempt_id=}"
+        self.log.info(message)
+        return self.finish({
+            "labs_path": labs_path,
+            "message": message,
+        })
 
     def check_xsrf_cookie(self):
         # Отключил хендлер
