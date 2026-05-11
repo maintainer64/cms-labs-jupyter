@@ -8,5 +8,7 @@ RUN uv pip install \
     -r /tmp/requirements.txt \
     -i https://mirrors.aliyun.com/pypi/simple/ && \
     rm /tmp/requirements.txt
+COPY ipython_startup/ /opt/ipython_startup/
+RUN chmod -R a+r /opt/ipython_startup
 COPY notebook.entrypoint.sh /usr/local/bin/notebook.entrypoint.sh
 USER ${NB_UID}
