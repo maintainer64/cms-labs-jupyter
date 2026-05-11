@@ -509,9 +509,4 @@ class PostmanMagic(Magics):
             self.url.value = line.strip()
         self.display()
 
-
-if __name__ != '__main__':
-    try:
-        get_ipython().register_magics(PostmanMagic)
-    except NameError:
-        pass
+get_ipython().register_magics(PostmanMagic)
