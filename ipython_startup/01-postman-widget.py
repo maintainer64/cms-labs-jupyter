@@ -18,8 +18,6 @@ from pygments.formatters import HtmlFormatter
 class PostmanMagic(Magics):
     """Класс, инкапсулирующий API-клиент в стиле Postman для Jupyter."""
 
-    _css_displayed = False  # чтобы CSS вставлялся только один раз
-
     # --- Стили (лёгкая тема, всё с префиксом pmw-) ---
     CSS = """
     <style>
@@ -497,9 +495,7 @@ class PostmanMagic(Magics):
     # ------------------------------------------------------------------
     def display(self):
         """Показывает виджет в Jupyter (один раз вставляет CSS)."""
-        if not self._css_displayed:
-            display(HTML(self.CSS))
-            self._css_displayed = True
+        display(HTML(self.CSS))
         display(self.container)
 
     @line_magic
