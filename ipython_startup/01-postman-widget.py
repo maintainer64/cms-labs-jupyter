@@ -12,11 +12,11 @@ import xmltodict
 from pygments import highlight as pygments_highlight
 from pygments.lexers import JsonLexer, XmlLexer, TextLexer
 from pygments.formatters import HtmlFormatter
+import base64
 
 
-@magics_class
-class PostmanMagic(Magics):
-    """Класс, инкапсулирующий API-клиент в стиле Postman для Jupyter."""
+class PostmanWidget:
+    """Виджет API-клиента в стиле Postman для Jupyter."""
 
     # --- Стили (лёгкая тема, всё с префиксом pmw-) ---
     CSS = """
@@ -107,7 +107,7 @@ class PostmanMagic(Magics):
         .pmw-send button {
             height: 48px !important;
             background: var(--jp-brand-color1) !important;
-            color: var(--fill-color, #ffffff) !important;   /* если --fill-color не задана, используем белый */
+            color: var(--fill-color, #ffffff) !important;
             font-weight: 700 !important;
             font-size: 13px !important;
             font-family: 'Inter', sans-serif !important;
@@ -134,11 +134,6 @@ class PostmanMagic(Magics):
             filter: brightness(0.92);
             transform: translateY(1px);
             box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
-        }
-        .pmw-send button:focus {
-            outline: 2px solid var(--jp-brand-color0) !important;
-            outline-offset: 2px !important;
-            box-shadow: none !important;
         }
 
         /* === TABS === */
@@ -202,6 +197,62 @@ class PostmanMagic(Magics):
             outline: none !important;
         }
         .pmw-textarea textarea::placeholder { color: #94a3b8; }
+
+        /* === Auth section === */
+        .pmw-section {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 16px;
+        }
+
+        .pmw-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .pmw-input input,
+        .pmw-password input,
+        .pmw-select select {
+            width: 100% !important;
+            height: 40px !important;
+            background: #ffffff !important;
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 8px !important;
+            padding: 0 12px !important;
+            font-size: 13px !important;
+            font-family: 'Inter', sans-serif !important;
+            color: #0f172a !important;
+            transition: border-color 0.2s, box-shadow 0.2s !important;
+            box-sizing: border-box !important;
+        }
+
+        .pmw-input input:focus,
+        .pmw-password input:focus,
+        .pmw-select select:focus {
+            border-color: var(--jp-brand-color1) !important;
+            outline: none !important;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+        }
+
+        .pmw-select select {
+            cursor: pointer !important;
+            appearance: none !important;
+            -webkit-appearance: none !important;
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>") !important;
+            background-repeat: no-repeat !important;
+            background-position: right 12px center !important;
+            padding-right: 32px !important;
+        }
+
+        .pmw-form-group {
+            margin-top: 14px;
+        }
 
         .pmw-response {
             background: #ffffff;
@@ -301,14 +352,14 @@ class PostmanMagic(Magics):
     </style>
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, initial_url=''):
         """Создаёт виджет и настраивает все элементы."""
-        super().__init__(*args, **kwargs)
+        self.initial_url = initial_url
         self._build_ui()
         self._wire_events()
 
     # ------------------------------------------------------------------
-    # Внутренние помощники (не засоряют глобальную область)
+    # Внутренние помощники
     # ------------------------------------------------------------------
     @staticmethod
     def _pretty_highlight(content, content_type=''):
@@ -363,7 +414,7 @@ class PostmanMagic(Magics):
         self.method.add_class('pmw-method')
 
         self.url = widgets.Text(
-            value='',
+            value=self.initial_url,
             placeholder='https://api.example.com/v1/resource',
             layout=widgets.Layout(flex='1 1 auto', width='auto')
         )
@@ -376,23 +427,79 @@ class PostmanMagic(Magics):
         self.send_btn_div = widgets.Box([self.send_btn])
         self.send_btn_div.add_class('pmw-send')
 
-        # Вкладки с телом и заголовками
+        # === Authorization Tab ===
+        self.auth_type = widgets.Dropdown(
+            options=['No Auth', 'Bearer Token', 'Basic Auth'],
+            value='No Auth',
+            layout=widgets.Layout(width='100%')
+        )
+        self.auth_type.add_class('pmw-select')
+
+        self.bearer_token = widgets.Text(
+            placeholder='your-token-here',
+            layout=widgets.Layout(width='100%')
+        )
+        self.bearer_token.add_class('pmw-input')
+
+        self.basic_username = widgets.Text(
+            placeholder='username',
+            layout=widgets.Layout(width='100%')
+        )
+        self.basic_username.add_class('pmw-input')
+
+        self.basic_password = widgets.Password(
+            placeholder='password',
+            layout=widgets.Layout(width='100%')
+        )
+        self.basic_password.add_class('pmw-password')
+
+        # Контейнеры для разных типов авторизации
+        self.bearer_container = widgets.VBox([
+            widgets.HTML('<div class="pmw-form-group"></div>'),
+            widgets.HTML('<div class="pmw-label">Token</div>'),
+            self.bearer_token
+        ], layout=widgets.Layout(display='none'))
+
+        self.basic_container = widgets.VBox([
+            widgets.HTML('<div class="pmw-form-group"></div>'),  # Отступ сверху
+            widgets.HTML('<div class="pmw-label">Username</div>'),
+            self.basic_username,
+            widgets.HTML('<div class="pmw-label" style="margin-top: 12px;">Password</div>'),
+            self.basic_password
+        ], layout=widgets.Layout(display='none'))
+
+        self.auth_fields = widgets.VBox([
+            self.bearer_container,
+            self.basic_container
+        ])
+
+        auth_section = widgets.VBox([
+            widgets.HTML('<div class="pmw-label">Type</div>'),
+            self.auth_type,
+            self.auth_fields
+        ])
+        auth_section.add_class('pmw-section')
+
+        # === Headers Tab ===
+        self.headers_input = widgets.Textarea(
+            placeholder='{\n  "X-Custom-Header": "value",\n  "Accept": "application/json"\n}',
+            layout=widgets.Layout(width='100%')
+        )
+        self.headers_input.add_class('pmw-textarea')
+
+        # === Body Tab ===
         self.body_input = widgets.Textarea(
             placeholder='JSON | XML | HTML | TEXT',
             layout=widgets.Layout(width='100%')
         )
         self.body_input.add_class('pmw-textarea')
 
-        self.headers_input = widgets.Textarea(
-            placeholder='{\n  "Authorization": "Bearer ...",\n  "X-Custom": "value"\n}',
-            layout=widgets.Layout(width='100%')
-        )
-        self.headers_input.add_class('pmw-textarea')
-
+        # Вкладки: Authorization → Headers → Body
         self.tabs = widgets.Tab()
-        self.tabs.children = [self.body_input, self.headers_input]
+        self.tabs.children = [self.body_input, auth_section, self.headers_input]
         self.tabs.set_title(0, 'Body')
-        self.tabs.set_title(1, 'Headers')
+        self.tabs.set_title(1, 'Authorization')
+        self.tabs.set_title(2, 'Headers')
         self.tabs.add_class('pmw-tabs')
 
         self.output = widgets.Output()
@@ -412,20 +519,58 @@ class PostmanMagic(Magics):
         self.container.add_class('pmw-container')
 
     def _wire_events(self):
-        """Привязывает обработчик нажатия кнопки Send."""
+        """Привязывает обработчики событий."""
         self.send_btn.on_click(self._on_send_click)
+        self.auth_type.observe(self._on_auth_type_change, names='value')
+
+    def _on_auth_type_change(self, change):
+        """Показывает/скрывает поля авторизации в зависимости от типа."""
+        auth_type = change['new']
+
+        if auth_type == 'Bearer Token':
+            self.bearer_container.layout.display = 'block'
+            self.basic_container.layout.display = 'none'
+        elif auth_type == 'Basic Auth':
+            self.bearer_container.layout.display = 'none'
+            self.basic_container.layout.display = 'block'
+        else:  # No Auth
+            self.bearer_container.layout.display = 'none'
+            self.basic_container.layout.display = 'none'
 
     # ------------------------------------------------------------------
     # Логика отправки запроса
     # ------------------------------------------------------------------
+    def _prepare_headers(self):
+        """Подготавливает заголовки с учетом авторизации."""
+        # Начинаем с пользовательских заголовков
+        h_str = self.headers_input.value.strip()
+        headers_dict = json.loads(h_str) if h_str else {}
+
+        # Добавляем авторизацию (если не переопределена в Headers)
+        auth_type = self.auth_type.value
+
+        if auth_type == 'Bearer Token' and 'Authorization' not in headers_dict:
+            token = self.bearer_token.value.strip()
+            if token:
+                headers_dict['Authorization'] = f'Bearer {token}'
+
+        elif auth_type == 'Basic Auth' and 'Authorization' not in headers_dict:
+            username = self.basic_username.value.strip()
+            password = self.basic_password.value.strip()
+            if username or password:
+                credentials = f'{username}:{password}'
+                encoded = base64.b64encode(credentials.encode()).decode()
+                headers_dict['Authorization'] = f'Basic {encoded}'
+
+        return headers_dict
+
     def _on_send_click(self, _):
         """Обработчик клика по кнопке Send."""
         self.output.clear_output()
         with self.output:
             try:
-                # Подготавливаем заголовки
-                h_str = self.headers_input.value.strip()
-                headers_dict = json.loads(h_str) if h_str else {}
+                # Подготавливаем заголовки (с авторизацией)
+                headers_dict = self._prepare_headers()
 
                 # Подготавливаем тело
                 b_str = self.body_input.value.strip()
@@ -457,6 +602,7 @@ class PostmanMagic(Magics):
                     headers=headers_dict,
                     data=body_data if isinstance(body_data, str) else None,
                     json=body_data if isinstance(body_data, (dict, list)) else None,
+                    verify=False,  # SSL проверка отключена
                     timeout=20
                 )
                 ms = round((time.time() - start) * 1000)
@@ -494,15 +640,51 @@ class PostmanMagic(Magics):
     # Публичный метод отображения
     # ------------------------------------------------------------------
     def display(self):
-        """Показывает виджет в Jupyter (один раз вставляет CSS)."""
-        display(HTML(self.CSS))
+        """Показывает виджет в Jupyter (всегда вставляет CSS)."""
+        display(HTML(self.CSS))  # Всегда отображаем CSS
         display(self.container)
+
+    def close(self):
+        """Закрывает виджет."""
+        self.container.close()
+
+
+@magics_class
+class PostmanMagic(Magics):
+    """IPython magic для создания PostmanWidget."""
+
+    # Хранилище активных виджетов
+    _max_instances = 100
+    _instances = []
 
     @line_magic
     def postman(self, line):
-        """Создаёт свежий экземпляр PostmanMagic и показывает его."""
-        if line.strip():
-            self.url.value = line.strip()
-        self.display()
+        """
+        Создаёт новый экземпляр PostmanWidget.
+        Хранится максимум 5 виджетов, старые автоматически удаляются.
 
+        Использование:
+            %postman                              # пустой виджет
+            %postman https://api.example.com      # с предзаполненным URL
+        """
+        # Если достигли лимита, удаляем самый старый
+        if len(PostmanMagic._instances) >= self._max_instances:
+            old_widget = PostmanMagic._instances.pop(0)
+            try:
+                old_widget.close()
+            except:
+                pass
+
+        # Создаём новый виджет
+        url = line.strip() if line else ''
+        widget = PostmanWidget(initial_url=url)
+
+        # Добавляем в список активных
+        PostmanMagic._instances.append(widget)
+
+        # Показываем
+        widget.display()
+
+
+# Регистрируем magic
 get_ipython().register_magics(PostmanMagic)
