@@ -4,7 +4,7 @@ metadata:
   name: hub-namespace-topology-manager
 rules:
   - apiGroups: [ "" ]
-    resources: [ "pods", "persistentvolumeclaims", "secrets", "services" ]
+    resources: [ "pods", "persistentvolumeclaims", "secrets", "services", "configmaps" ]
     verbs: [ "get", "watch", "list", "create", "delete" ]
   - apiGroups: [ "" ]
     resources: [ "events" ]
