@@ -1,5 +1,10 @@
 FROM harbor.k8s.cmslabs.ru/proxy_quay_io/jupyter/minimal-notebook:hub-5.4.4
 USER root
+RUN apt-get update && \
+    apt-get install -y iputils-ping libcap2-bin && \
+    setcap cap_net_raw+ep /bin/ping && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 COPY --from=harbor.k8s.cmslabs.ru/proxy_ghcr_io/astral-sh/uv:latest /uv /uvx /bin/
 COPY notebook.requirements.txt /tmp/requirements.txt
 RUN uv pip install \
