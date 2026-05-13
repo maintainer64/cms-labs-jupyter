@@ -6,7 +6,6 @@ from cmsspawner.git_client.client import GitClient
 from cmsspawner.spawner.routes.first_step import FirstStepHandler
 from cmsspawner.spawner.routes.second_step import SecondStepHandler
 from cmsspawner.spawner.routes.topology import TopologyHandler
-from .kubectl_topology import KubectlTopology
 from .spawner import CMSSpawner
 
 
@@ -37,6 +36,7 @@ def vault_init(c):
     c.GenericOAuthenticator.token_url = secrets["OIDC_TOKEN_URL"]
     c.GenericOAuthenticator.userdata_url = secrets["OIDC_USERDATA_URL"]
     c.GenericOAuthenticator.post_auth_hook = extract_display_name
+    c.GenericOAuthenticator.auth_refresh_age = 0
     CMSRpcClient.base_url = secrets["CMS_URL"]
     CMSRpcClient.login = secrets["CMS_LOGIN"]
     CMSRpcClient.password = secrets["CMS_PASSWORD"]
