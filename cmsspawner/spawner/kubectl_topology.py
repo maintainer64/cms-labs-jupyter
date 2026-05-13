@@ -71,17 +71,17 @@ class KubectlTopology:
             name = manifest.get('metadata', {}).get('name', 'Unknown')
             namespace = manifest['metadata']['namespace']
 
-            # Парсим group/version
-            group, version = api_version.split('/', 1)
-
-            # Определяем plural
-            if kind.endswith('y'):
-                plural = kind[:-1].lower() + 'ies'  # Topology -> topologies
-            else:
-                plural = kind.lower() + 's'
-
             self.logger.info(f"Applying {idx}/{total}: {kind}/{name} in namespace {namespace}")
 
+            # Парсим group/version
+            if '/' in api_version:
+                group, version = api_version.split('/', 1)
+            else:
+                # Для стандартных ресурсов (v1, apps/v1 и т.д.)
+                group = ""
+                version = api_version
+
+            plural = self._get_plural(kind)
             custom_api = CustomObjectsApi(api_client=self.api_client)
 
             await asyncio.wait_for(
@@ -103,3 +103,26 @@ class KubectlTopology:
             else:
                 self.logger.exception(f"Failed to create {kind}/{name} in {namespace}")
                 raise
+
+    @staticmethod
+    def _get_plural(kind: str) -> str:
+        """Преобразует Kind в plural форму"""
+        # Специальные случаи
+        special_cases = {
+            'Endpoints': 'endpoints',
+            'EndpointSlice': 'endpointslices',
+            'Ingress': 'ingresses',
+            'NetworkPolicy': 'networkpolicies',
+        }
+
+        if kind in special_cases:
+            return special_cases[kind]
+
+        # Общие правила
+        kind_lower = kind.lower()
+        if kind.endswith('y'):
+            return kind_lower[:-1] + 'ies'  # Topology -> topologies
+        elif kind.endswith('s'):
+            return kind_lower + 'es'  # Ingress -> ingresses (но уже в special_cases)
+        else:
+            return kind_lower + 's'  # ConfigMap -> configmaps
