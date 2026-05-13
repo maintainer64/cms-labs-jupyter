@@ -9,6 +9,11 @@ from .utils import setup_logger
 
 
 class KubectlTopology:
+    # Стандартные ресурсы, которые нужно обрабатывать через CoreV1Api
+    CORE_RESOURCES = {
+        'ConfigMap', 'Secret', 'Service', 'Pod',
+        'PersistentVolumeClaim', 'Namespace', 'ServiceAccount'
+    }
 
     def __init__(
             self,
@@ -40,11 +45,9 @@ class KubectlTopology:
 
     async def apply(self, yaml_content: str, namespace: str) -> None:
         """Основной метод: применяет манифесты"""
-        # Шаг 1: Получаем список всех манифестов из YAML
         manifests = list(yaml.safe_load_all(yaml_content))
         self.logger.info(f"Parsed {len(manifests)} manifests from YAML")
 
-        # Шаг 2: Применяем каждый манифест
         for idx, manifest in enumerate(manifests, start=1):
             if not manifest:
                 continue
@@ -73,17 +76,86 @@ class KubectlTopology:
 
             self.logger.info(f"Applying {idx}/{total}: {kind}/{name} in namespace {namespace}")
 
-            # Парсим group/version
-            if '/' in api_version:
-                group, version = api_version.split('/', 1)
+            # Определяем, какой API использовать
+            if api_version == 'v1' and kind in self.CORE_RESOURCES:
+                # Стандартные core ресурсы
+                await self._apply_core_resource(manifest, kind, namespace, name)
             else:
-                # Для стандартных ресурсов (v1, apps/v1 и т.д.)
-                group = ""
-                version = api_version
+                # Кастомные ресурсы или ресурсы других API групп
+                await self._apply_custom_resource(manifest, api_version, kind, namespace, name)
 
-            plural = self._get_plural(kind)
-            custom_api = CustomObjectsApi(api_client=self.api_client)
+            self.logger.info(f"Successfully applied {idx}/{total}: {kind}/{name}")
 
+        except ApiException as e:
+            if e.status == 409:
+                self.logger.info(f"Resource {kind}/{name} already exists in {namespace}, skipping")
+            else:
+                self.logger.exception(f"Failed to apply {kind}/{name} in {namespace}")
+                raise
+
+    async def _apply_core_resource(self, manifest: dict, kind: str, namespace: str, name: str):
+        """Применяет стандартный core ресурс через CoreV1Api"""
+        core_v1 = CoreV1Api(self.api_client)
+
+        # Маппинг методов для создания
+        create_methods = {
+            'ConfigMap': core_v1.create_namespaced_config_map,
+            'Secret': core_v1.create_namespaced_secret,
+            'Service': core_v1.create_namespaced_service,
+            'Pod': core_v1.create_namespaced_pod,
+            'PersistentVolumeClaim': core_v1.create_namespaced_persistent_volume_claim,
+            'ServiceAccount': core_v1.create_namespaced_service_account,
+        }
+
+        # Маппинг методов для замены
+        replace_methods = {
+            'ConfigMap': core_v1.replace_namespaced_config_map,
+            'Secret': core_v1.replace_namespaced_secret,
+            'Service': core_v1.replace_namespaced_service,
+            'Pod': core_v1.replace_namespaced_pod,
+            'PersistentVolumeClaim': core_v1.replace_namespaced_persistent_volume_claim,
+            'ServiceAccount': core_v1.replace_namespaced_service_account,
+        }
+
+        create_method = create_methods.get(kind)
+        if not create_method:
+            raise ValueError(f"Unsupported core resource: {kind}")
+
+        try:
+            await asyncio.wait_for(
+                create_method(namespace=namespace, body=manifest),
+                timeout=self.k8s_api_request_timeout,
+            )
+        except ApiException as e:
+            if e.status == 409:
+                # Ресурс существует -> заменяем
+                self.logger.info(f"Resource {kind}/{name} exists, replacing...")
+                replace_method = replace_methods.get(kind)
+                if replace_method:
+                    await asyncio.wait_for(
+                        replace_method(name=name, namespace=namespace, body=manifest),
+                        timeout=self.k8s_api_request_timeout,
+                    )
+                else:
+                    raise
+            else:
+                raise
+
+    async def _apply_custom_resource(self, manifest: dict, api_version: str, kind: str, namespace: str, name: str):
+        """Применяет кастомный ресурс через CustomObjectsApi"""
+        # Парсим group/version
+        if '/' in api_version:
+            group, version = api_version.split('/', 1)
+        else:
+            # Для ресурсов типа apps/v1, batch/v1
+            raise ValueError(f"Non-core resource without group: {api_version}/{kind}")
+
+        # Определяем plural
+        plural = self._get_plural(kind)
+
+        custom_api = CustomObjectsApi(api_client=self.api_client)
+
+        try:
             await asyncio.wait_for(
                 custom_api.create_namespaced_custom_object(
                     group=group,
@@ -94,20 +166,27 @@ class KubectlTopology:
                 ),
                 timeout=self.k8s_api_request_timeout,
             )
-
-            self.logger.info(f"Successfully applied {idx}/{total}: {kind}/{name}")
-
         except ApiException as e:
             if e.status == 409:
-                self.logger.info(f"Resource {kind}/{name} already exists in {namespace}, skipping")
+                # Ресурс существует -> заменяем
+                self.logger.info(f"Resource {kind}/{name} exists, replacing...")
+                await asyncio.wait_for(
+                    custom_api.replace_namespaced_custom_object(
+                        group=group,
+                        version=version,
+                        namespace=namespace,
+                        plural=plural,
+                        name=name,
+                        body=manifest,
+                    ),
+                    timeout=self.k8s_api_request_timeout,
+                )
             else:
-                self.logger.exception(f"Failed to create {kind}/{name} in {namespace}")
                 raise
 
     @staticmethod
     def _get_plural(kind: str) -> str:
         """Преобразует Kind в plural форму"""
-        # Специальные случаи
         special_cases = {
             'Endpoints': 'endpoints',
             'EndpointSlice': 'endpointslices',
@@ -118,11 +197,10 @@ class KubectlTopology:
         if kind in special_cases:
             return special_cases[kind]
 
-        # Общие правила
         kind_lower = kind.lower()
         if kind.endswith('y'):
-            return kind_lower[:-1] + 'ies'  # Topology -> topologies
+            return kind_lower[:-1] + 'ies'
         elif kind.endswith('s'):
-            return kind_lower + 'es'  # Ingress -> ingresses (но уже в special_cases)
+            return kind_lower + 'es'
         else:
-            return kind_lower + 's'  # ConfigMap -> configmaps
+            return kind_lower + 's'
