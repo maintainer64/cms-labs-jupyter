@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 import ipywidgets as widgets
 from IPython.display import display, HTML
 from IPython.core.magic import (
@@ -653,34 +655,45 @@ class PostmanWidget:
 class PostmanMagic(Magics):
     """IPython magic для создания PostmanWidget."""
 
-    # Хранилище активных виджетов
-    _max_instances = 100
-    _instances = []
+    # Хранилище активных виджетов (OrderedDict для LRU)
+    _max_instances = 10
+    _instances = OrderedDict()  # {url: widget}
 
     @line_magic
     def postman(self, line):
         """
-        Создаёт новый экземпляр PostmanWidget.
-        Хранится максимум 5 виджетов, старые автоматически удаляются.
+        Создаёт новый экземпляр PostmanWidget или возвращает существующий.
+        Если URL совпадает с уже открытым виджетом, возвращает его.
+        Хранится максимум 100 виджетов, старые автоматически удаляются.
 
         Использование:
             %postman                              # пустой виджет
-            %postman https://api.example.com      # с предзаполненным URL
+            %postman https://api.example.com      # с предзаполненным URL (переиспользуется если уже открыт)
         """
-        # Если достигли лимита, удаляем самый старый
+        url = line.strip() if line else ''
+
+        # Проверяем, есть ли уже виджет с таким URL
+        if url in PostmanMagic._instances:
+            widget = PostmanMagic._instances[url]
+            # Перемещаем в конец (LRU - недавно использованный)
+            PostmanMagic._instances.move_to_end(url)
+            # Показываем существующий виджет
+            widget.display()
+            return
+
+        # Если достигли лимита, удаляем самый старый (первый)
         if len(PostmanMagic._instances) >= self._max_instances:
-            old_widget = PostmanMagic._instances.pop(0)
+            oldest_url, old_widget = PostmanMagic._instances.popitem(last=False)
             try:
                 old_widget.close()
             except:
                 pass
 
         # Создаём новый виджет
-        url = line.strip() if line else ''
         widget = PostmanWidget(initial_url=url)
 
-        # Добавляем в список активных
-        PostmanMagic._instances.append(widget)
+        # Добавляем в хранилище (в конец)
+        PostmanMagic._instances[url] = widget
 
         # Показываем
         widget.display()
