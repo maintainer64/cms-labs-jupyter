@@ -107,39 +107,14 @@ class KubectlTopology:
             'ServiceAccount': core_v1.create_namespaced_service_account,
         }
 
-        # Маппинг методов для замены
-        replace_methods = {
-            'ConfigMap': core_v1.replace_namespaced_config_map,
-            'Secret': core_v1.replace_namespaced_secret,
-            'Service': core_v1.replace_namespaced_service,
-            'Pod': core_v1.replace_namespaced_pod,
-            'PersistentVolumeClaim': core_v1.replace_namespaced_persistent_volume_claim,
-            'ServiceAccount': core_v1.replace_namespaced_service_account,
-        }
-
         create_method = create_methods.get(kind)
         if not create_method:
             raise ValueError(f"Unsupported core resource: {kind}")
 
-        try:
-            await asyncio.wait_for(
-                create_method(namespace=namespace, body=manifest),
-                timeout=self.k8s_api_request_timeout,
-            )
-        except ApiException as e:
-            if e.status == 409:
-                # Ресурс существует -> заменяем
-                self.logger.info(f"Resource {kind}/{name} exists, replacing...")
-                replace_method = replace_methods.get(kind)
-                if replace_method:
-                    await asyncio.wait_for(
-                        replace_method(name=name, namespace=namespace, body=manifest),
-                        timeout=self.k8s_api_request_timeout,
-                    )
-                else:
-                    raise
-            else:
-                raise
+        await asyncio.wait_for(
+            create_method(namespace=namespace, body=manifest),
+            timeout=self.k8s_api_request_timeout,
+        )
 
     async def _apply_custom_resource(self, manifest: dict, api_version: str, kind: str, namespace: str, name: str):
         """Применяет кастомный ресурс через CustomObjectsApi"""
@@ -154,35 +129,16 @@ class KubectlTopology:
         plural = self._get_plural(kind)
 
         custom_api = CustomObjectsApi(api_client=self.api_client)
-
-        try:
-            await asyncio.wait_for(
-                custom_api.create_namespaced_custom_object(
-                    group=group,
-                    version=version,
-                    namespace=namespace,
-                    plural=plural,
-                    body=manifest,
-                ),
-                timeout=self.k8s_api_request_timeout,
-            )
-        except ApiException as e:
-            if e.status == 409:
-                # Ресурс существует -> заменяем
-                self.logger.info(f"Resource {kind}/{name} exists, replacing...")
-                await asyncio.wait_for(
-                    custom_api.replace_namespaced_custom_object(
-                        group=group,
-                        version=version,
-                        namespace=namespace,
-                        plural=plural,
-                        name=name,
-                        body=manifest,
-                    ),
-                    timeout=self.k8s_api_request_timeout,
-                )
-            else:
-                raise
+        await asyncio.wait_for(
+            custom_api.create_namespaced_custom_object(
+                group=group,
+                version=version,
+                namespace=namespace,
+                plural=plural,
+                body=manifest,
+            ),
+            timeout=self.k8s_api_request_timeout,
+        )
 
     @staticmethod
     def _get_plural(kind: str) -> str:
