@@ -10,6 +10,7 @@ paramiko  # Подключение по sshV2
 pysnmp  # SNMP сервер времени
 requests  # HTTP запросы
 ncclient  # NETCONF протокол
+jsonrpclib # JSON-RPC v2.0
 
 # Интерфейс
 jupyterlab-language-pack-ru-RU  # Языковой пакет
