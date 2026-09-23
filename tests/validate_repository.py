@@ -33,6 +33,6 @@ requirements = (ROOT / "requirements.in").read_text(encoding="utf-8").lower()
 assert "jupyterhub" not in requirements
 assert "uv pip uninstall --system jupyterhub" in dockerfile
 assert 'CMD ["start-notebook.py"]' in dockerfile
-assert "USER ${NB_UID}" in dockerfile
+assert "USER 1000" in dockerfile
 
 print(f"validated {len(requested)} direct and {len(locked)} locked packages")

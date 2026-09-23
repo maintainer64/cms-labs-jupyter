@@ -3,7 +3,7 @@
 ARG JUPYTER_BASE_IMAGE=quay.io/jupyter/minimal-notebook:2026-09-01@sha256:aebcf531fc77f3341568f5e37de7eb392ae48f1ae5ce9bc9cf779bd602548d17
 FROM ${JUPYTER_BASE_IMAGE}
 
-USER root
+USER 0
 
 # The distro repository is fixed by the dated parent image; this small runtime
 # utility receives security updates when the base image is intentionally bumped.
@@ -32,7 +32,7 @@ COPY --chmod=755 notebook.entrypoint.sh /usr/local/bin/notebook.entrypoint.sh
 RUN ln -s /usr/local/bin/notebook.entrypoint.sh \
         /usr/local/bin/start-notebook.d/10-cms-labs.sh
 
-USER ${NB_UID}
+USER 1000
 
 EXPOSE 8888
 
