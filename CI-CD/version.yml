@@ -1,6 +1,0 @@
-version:
-  extends:
-    - .semantic-release
-    - .releases-branch
-  stage: version
-  needs: [ ]

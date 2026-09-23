@@ -1,14 +1,19 @@
-#!/bin/bash
-# Ваши настройки JupyterLab
-mkdir -p /home/jovyan/.jupyter/lab/user-settings/@jupyterlab/translation-extension && \
-echo '{"locale": "ru_RU"}' > /home/jovyan/.jupyter/lab/user-settings/@jupyterlab/translation-extension/plugin.jupyterlab-settings
-# Новый блок: стартовые скрипты IPython
-mkdir -p /home/jovyan/.ipython/profile_default/startup
-if [ -d /opt/ipython_startup ]; then
-    cp -r /opt/ipython_startup/. /home/jovyan/.ipython/profile_default/startup/
-fi
-# Возвращаем права пользователю jovyan (если контейнер стартует от root, что в Jupyter обычно бывает)
-chown -R jovyan: /home/jovyan/.jupyter /home/jovyan/.ipython
+#!/bin/sh
 
-# Запускаем команду, переданную в контейнер
-exec "$@"
+# This file is a Jupyter Docker Stacks startup hook. It is deliberately
+# idempotent because clabgate can also invoke it from a postStart hook.
+(
+    set -eu
+
+    notebook_home="${HOME:-/home/jovyan}"
+    settings_dir="${notebook_home}/.jupyter/lab/user-settings/@jupyterlab/translation-extension"
+    startup_dir="${notebook_home}/.ipython/profile_default/startup"
+
+    mkdir -p "${settings_dir}" "${startup_dir}"
+    printf '%s\n' '{"locale": "ru_RU"}' > \
+        "${settings_dir}/plugin.jupyterlab-settings"
+
+    if [ -d /opt/cms-labs/ipython_startup ]; then
+        cp -R /opt/cms-labs/ipython_startup/. "${startup_dir}/"
+    fi
+)

@@ -1,0 +1,21 @@
+# Scientific and notebook utilities used by existing laboratory notebooks.
+pandas
+numpy
+matplotlib
+pillow
+xmltodict
+
+# Network automation protocols.
+paramiko
+pysnmp
+requests
+ncclient
+
+# JupyterLab UI and compatibility extensions.
+jupyterlab-language-pack-ru-RU
+ipywidgets
+jupyter-collaboration
+jupyterlab-execute-time
+jupyter-resource-usage
+nbgitpuller
+pipdeptree

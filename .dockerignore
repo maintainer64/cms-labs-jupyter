@@ -1,0 +1,7 @@
+.git
+.gitignore
+.github
+.idea
+README.md
+tests/__pycache__
+*.pyc
