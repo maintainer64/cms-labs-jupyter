@@ -1,0 +1,20 @@
+name: Bug report
+description: Сообщить о воспроизводимой ошибке
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Описание
+      description: Что произошло и что ожидалось?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Воспроизведение
+      description: Команды, шаги, commit и окружение.
+    validations:
+      required: true
+
